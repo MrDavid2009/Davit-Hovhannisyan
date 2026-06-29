@@ -2460,7 +2460,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 </form>
               </div>
 
-              <motion.div>
+              </motion.div>
             )}
 
             {/* TAB 2: ACTIVE AND HISTORIC ORDERS */}
@@ -2783,7 +2783,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <Send className="w-4 h-4" />
                 </button>
               </form>
-              <motion.div>
+              </motion.div>
             )}
 
             {/* TAB 4: USER CABINET & DEVICE SYNCHRONIZATION DATA */}
@@ -3409,7 +3409,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 )}
               </div>
 
-              <motion.div>
+              </motion.div>
             )}
           </AnimatePresence>
 
@@ -4269,13 +4269,13 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               />
             );
           })}
-        <div>
+        </div>
       )}
 
       {/* GIFT PROMO MODAL FOR CLIENT */}
       {showPromoGiftModal && user.promoCode && (
         <div id="promo-postcard-modal" className="fixed inset-0 bg-black/65 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <motion.div>
+          <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 30 }}
@@ -4355,8 +4355,8 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               </div>
 
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       )}
 
       {/* TORN PAPER PROMO CODE EFFECT OVERLAY */}
@@ -4385,7 +4385,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 />
               );
             })}
-          </motion.div>
+          </div>
 
           <div className="text-center space-y-4 mb-10 z-10">
             <motion.h3 
@@ -4435,7 +4435,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <div key={i} className="w-4 h-4 bg-black rounded-full -mr-3" />
                 ))}
               </div>
-            </div>
+            </motion.div>
 
             {/* RIGHT HALF */}
             <motion.div
@@ -4464,9 +4464,9 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <div key={i} className="w-4 h-4 bg-black rounded-full -ml-3" />
                 ))}
               </div>
-            </div>
+            </motion.div>
 
-          </motion.div>
+          </div>
 
           <motion.button
             initial={{ opacity: 0 }}
@@ -4477,7 +4477,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
           >
             Отлично, продолжить 👍
           </motion.button>
-        </motion.div>
+        </div>
       )}
 
     </div>
