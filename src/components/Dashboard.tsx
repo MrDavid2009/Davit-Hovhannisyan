@@ -2460,7 +2460,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 </form>
               </div>
 
-              </div>
+              <motion.div>
             )}
 
             {/* TAB 2: ACTIVE AND HISTORIC ORDERS */}
@@ -2783,7 +2783,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <Send className="w-4 h-4" />
                 </button>
               </form>
-              </div>
+              <motion.div>
             )}
 
             {/* TAB 4: USER CABINET & DEVICE SYNCHRONIZATION DATA */}
@@ -3409,7 +3409,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 )}
               </div>
 
-              </div>
+              <motion.div>
             )}
           </AnimatePresence>
 
@@ -4269,13 +4269,13 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               />
             );
           })}
-        </motion.div>
+        <div>
       )}
 
       {/* GIFT PROMO MODAL FOR CLIENT */}
       {showPromoGiftModal && user.promoCode && (
         <div id="promo-postcard-modal" className="fixed inset-0 bg-black/65 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <motion.div 
+          <motion.div>
             initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 30 }}
