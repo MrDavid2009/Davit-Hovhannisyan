@@ -2460,7 +2460,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 </form>
               </div>
 
-              </motion.div>
+              </div>
             )}
 
             {/* TAB 2: ACTIVE AND HISTORIC ORDERS */}
@@ -2783,7 +2783,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <Send className="w-4 h-4" />
                 </button>
               </form>
-              </motion.div>
+              </div>
             )}
 
             {/* TAB 4: USER CABINET & DEVICE SYNCHRONIZATION DATA */}
@@ -3409,7 +3409,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 )}
               </div>
 
-              </motion.div>
+              </div>
             )}
           </AnimatePresence>
 
@@ -4269,7 +4269,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               />
             );
           })}
-        </div>
+        </motion.div>
       )}
 
       {/* GIFT PROMO MODAL FOR CLIENT */}
@@ -4355,8 +4355,8 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               </div>
 
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       )}
 
       {/* TORN PAPER PROMO CODE EFFECT OVERLAY */}
@@ -4385,7 +4385,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 />
               );
             })}
-          </div>
+          </motion.div>
 
           <div className="text-center space-y-4 mb-10 z-10">
             <motion.h3 
@@ -4435,7 +4435,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <div key={i} className="w-4 h-4 bg-black rounded-full -mr-3" />
                 ))}
               </div>
-            </motion.div>
+            </div>
 
             {/* RIGHT HALF */}
             <motion.div
@@ -4464,9 +4464,9 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   <div key={i} className="w-4 h-4 bg-black rounded-full -ml-3" />
                 ))}
               </div>
-            </motion.div>
+            </div>
 
-          </div>
+          </motion.div>
 
           <motion.button
             initial={{ opacity: 0 }}
@@ -4477,7 +4477,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
           >
             Отлично, продолжить 👍
           </motion.button>
-        </div>
+        </motion.div>
       )}
 
     </div>
