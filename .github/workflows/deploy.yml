@@ -1,0 +1,25 @@
+name: Deploy Website to Beget
+on:
+  push:
+    branches: [main]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm cache clean --force
+          npm install
+          npm install @tailwindcss/oxide-linux-x64-gnu --no-save
+      - name: Build
+        run: npm run build
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+      - name: Deploy via FTP
+        run: |
+          lftp -e "set ftp:ssl-allow no; mirror --reverse --delete --verbose --exclude .git/ --exclude node_modules/ ./ ./; bye" -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_HOST }}
