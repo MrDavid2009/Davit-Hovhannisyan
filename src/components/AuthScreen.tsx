@@ -215,7 +215,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
       <div className="glass-bg-orb w-[90px] h-[90px] top-[28%] right-[18%] opacity-50 animate-[float-reverse_18s_infinite_ease-in-out]" style={{ backdropFilter: 'blur(8px) saturate(100%)' }} />
 
       {/* Top Header */}
-      <div className="mx-auto w-full max-w-md flex justify-between items-center px-4 py-3 bg-white/40 dark:bg-[#140a23]/35 border border-white/60 dark:border-white/10 rounded-2xl backdrop-blur-md relative z-10 shadow-sm">
+      <div className="mx-auto w-full max-w-md flex justify-between items-center px-4 py-3 bg-white/40 dark:bg-[#140a23]/35 border border-white/60 dark:border-white/10 border-b-0 rounded-t-[28px] backdrop-blur-md relative z-10 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="squircle-3d-tile tile-3d-orange w-10 h-10 shrink-0 scale-105 shadow-md">
             <FileText className="w-5 h-5 text-white icon-3d-svg animate-pulse" />
@@ -229,8 +229,8 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
       </div>
 
       {/* Main card box */}
-      <div className="mt-8 sm:mx-auto w-full max-w-md relative z-10">
-        <div className="glass-cozy-card py-8 px-4 sm:px-10 rounded-[32px] transition-all duration-300 shadow-xl">
+      <div className="sm:mx-auto w-full max-w-md relative z-10">
+        <div className="glass-cozy-card py-8 px-4 sm:px-10 rounded-b-[32px] rounded-t-none border-t-0 transition-all duration-300 shadow-xl">
           
           {/* Header titles */}
           <div className="text-center mb-8">
