@@ -1,13 +1,12 @@
 {
-  "name": "Копи-Центр Печать 24",
-  "short_name": "Печать 24",
-  "description": "Печатный центр 24/7 — личный кабинет клиента, отправка файлов и трекинг заказов",
+  "name": "Фото-Север — Копи-Центр",
+  "short_name": "Фото-Север",
+  "description": "Копи-центр Фото-Север в Раменском. Печать фото, документов, переплёт. Северное шоссе, 18.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#4f46e5",
-  "orientation": "portrait",
-  "categories": ["utilities", "business"],
+  "background_color": "#0a0a14",
+  "theme_color": "#f97316",
+  "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/logo-192.png",
@@ -16,16 +15,16 @@
       "purpose": "any"
     },
     {
-      "src": "/logo-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "/logo-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/logo-512.png",
@@ -45,7 +44,7 @@
       "files": [
         {
           "name": "files",
-          "accept": ["*/*"]
+          "accept": ["image/*", "application/pdf", ".doc", ".docx", ".zip", ".rar"]
         }
       ]
     }
