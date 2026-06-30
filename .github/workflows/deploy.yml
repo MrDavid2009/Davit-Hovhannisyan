@@ -18,8 +18,13 @@ jobs:
           npm install @tailwindcss/oxide-linux-x64-gnu --no-save
       - name: Build
         run: npm run build
-      - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
-      - name: Deploy via FTP
-        run: |
-          lftp -e "set ftp:ssl-allow no; mirror --reverse --delete --verbose --exclude .git/ --exclude node_modules/ ./ ./; bye" -u ${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }} ${{ secrets.FTP_HOST }}
+      - name: Deploy via SFTP
+        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
+        with:
+          username: ${{ secrets.FTP_USERNAME }}
+          server: ${{ secrets.FTP_HOST }}
+          port: 22
+          password: ${{ secrets.FTP_PASSWORD }}
+          local_path: './*'
+          remote_path: '/'
+          sftpArgs: '-o ConnectTimeout=30'
