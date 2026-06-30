@@ -45,7 +45,38 @@ interface AdminPanelProps {
 
 export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: AdminPanelProps) {
   // Navigation
-  const [activeTab, setActiveTab] = useState<'orders' | 'chat' | 'users' | 'analytics' | 'settings' | 'archive'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'chat' | 'users' | 'analytics' | 'settings' | 'archive' | 'services'>('orders');
+
+  // 3D tilt effect on sidebar icon hover (mouse tracking) — matches Dashboard client style
+  useEffect(() => {
+    const icons = document.querySelectorAll('.glass-icon-capsule');
+    const handlers: Array<{el: Element, move: any, leave: any}> = [];
+
+    icons.forEach(icon => {
+      const move = (e: MouseEvent) => {
+        const rect = icon.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        (icon as HTMLElement).style.transform = `perspective(150px) rotateX(${-y * 14}deg) rotateY(${x * 14}deg) translateY(-2px)`;
+      };
+      const leave = () => {
+        (icon as HTMLElement).style.transform = '';
+      };
+      const parent = icon.closest('button');
+      if (parent) {
+        parent.addEventListener('mousemove', move);
+        parent.addEventListener('mouseleave', leave);
+        handlers.push({ el: parent, move, leave });
+      }
+    });
+
+    return () => {
+      handlers.forEach(({ el, move, leave }) => {
+        el.removeEventListener('mousemove', move);
+        el.removeEventListener('mouseleave', leave);
+      });
+    };
+  }, [activeTab]);
 
   // Selected user for viewing uploaded files list
   const [selectedUserForFiles, setSelectedUserForFiles] = useState<User | null>(null);
