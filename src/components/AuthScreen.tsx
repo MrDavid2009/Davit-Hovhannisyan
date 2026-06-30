@@ -234,9 +234,13 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
           
           {/* Header titles */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100/50 dark:border-indigo-900/30 text-[9px] text-indigo-600 dark:text-indigo-400 font-black uppercase tracking-wider mb-3">
-              <Sparkles className="w-3 h-3 text-indigo-500 animate-spin" />
-              Премиальная полиграфия
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100/50 dark:border-emerald-900/30 text-[9px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider mb-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <Printer className="w-3 h-3 text-emerald-500" />
+              Принимаем заказы онлайн
             </div>
             
             <h2 className="text-2.5xl font-black text-slate-900 dark:text-white leading-snug font-display tracking-tight">
@@ -451,7 +455,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-4 gap-2.5">
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
               <button
                 type="button"
                 onClick={() => triggerSocialAuth('google')}
@@ -484,35 +488,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => triggerSocialAuth('vk')}
-                disabled={!!socialLoading}
-                className="flex justify-center items-center py-2.5 px-3 border border-slate-200/80 dark:border-slate-800/85 rounded-xl bg-white/60 dark:bg-slate-950/50 hover:bg-slate-50 dark:hover:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
-                title="VK Connect"
-              >
-                {socialLoading === 'vk' ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-indigo-600 animate-spin" />
-                ) : (
-                  <svg className="w-4.5 h-4.5 text-[#0077FF] dark:text-[#3f94ff]" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M15.024 19.141c-5.748 0-10.354-4.57-10.457-11.141H7.5c.071 4.795 2.203 6.829 3.882 7.247V8h2.824v4.132c1.729-.184 3.473-2.073 4.086-4.132h2.824a10.22 10.22 0 01-3.765 5.518c1.376.623 3.153 2.296 4.141 5.623h-3.035c-.776-2.39-2.706-4.247-4.259-4.39V19.14h-.012z"/>
-                  </svg>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => triggerSocialAuth('yandex')}
-                disabled={!!socialLoading}
-                className="flex justify-center items-center py-1.5 px-3 border border-slate-200/80 dark:border-slate-800/85 rounded-xl bg-white/60 dark:bg-slate-950/50 hover:bg-slate-50 dark:hover:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
-                title="Yandex ID"
-              >
-                {socialLoading === 'yandex' ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-indigo-600 animate-spin" />
-                ) : (
-                  <span className="text-rose-500 dark:text-rose-400 font-black text-base font-serif">Я</span>
-                )}
-              </button>
+              
             </div>
           </div>
 
@@ -546,28 +522,8 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
         </div>
       </div>
 
-      {/* Quick Test Demo Helpers for evaluation */}
-      <div className="mt-12 mx-auto w-full max-w-sm text-center relative z-10 px-2">
-        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-2.5">Зайти под демо-ролями</p>
-        <div className="grid grid-cols-2 gap-2 mt-1">
-          <button
-            onClick={handleQuickIvan}
-            className="text-[11px] bg-slate-200/40 hover:bg-slate-200 dark:bg-slate-900/40 dark:hover:bg-slate-900 border border-slate-300/20 dark:border-slate-850/30 text-slate-700 dark:text-slate-300 px-3 py-2.5 rounded-xl font-semibold transition-all cursor-pointer backdrop-blur-md hover:-translate-y-0.5 active:translate-y-0"
-          >
-            Войти как Клиент (Иван)
-          </button>
-          <button
-            onClick={handleQuickAdmin}
-            className="text-[11px] bg-indigo-50/70 hover:bg-indigo-100/80 dark:bg-indigo-950/20 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 px-3 py-2.5 rounded-xl font-black border border-indigo-100/30 dark:border-indigo-900/15 transition-all cursor-pointer backdrop-blur-md hover:-translate-y-0.5 active:translate-y-0"
-          >
-            Войти как Администратор
-          </button>
-        </div>
-        <p className="text-[9px] text-slate-400 dark:text-slate-500 mt-2.5">Быстрые переключатели для быстрой демонстрации личного кабинета и панели оператора.</p>
-      </div>
-
       <div className="mt-10 text-center text-[10px] text-slate-400 dark:text-slate-550 font-medium relative z-10">
-        &copy; 2026 Мастерская Широкоформатной Печати "Фото-Север" &middot; Северное шоссе, 18 &middot; Лицензия SSL &middot; Все права заверены
+        &copy; 2026 Копи-Центр "Фото-Север" &middot; Северное шоссе, 18 &middot; Лицензия SSL &middot; Все права защищены
       </div>
     </div>
   );
