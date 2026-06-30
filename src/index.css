@@ -1918,3 +1918,106 @@ button:hover .glass-icon-capsule {
     radial-gradient(circle at 50% 100%, #172554 0%, #0b1530 55%, #020617 100%);
   background-attachment: fixed;
 }
+
+/* ============================================
+   AUTH SCREEN — настоящее стекло (доработка по референсу:
+   меньше белого, виден цвет фона, диагональный блик, светлый текст)
+   ============================================ */
+#auth-screen-root .glass-cozy-card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 100%) !important;
+  backdrop-filter: blur(18px) saturate(170%) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(170%) !important;
+  border: 1.5px solid rgba(255,255,255,0.55) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.65),
+    inset 0 0 50px rgba(255,255,255,0.06),
+    0 25px 70px rgba(7,20,60,0.35),
+    0 4px 18px rgba(7,20,60,0.2) !important;
+}
+.dark #auth-screen-root .glass-cozy-card {
+  background: linear-gradient(160deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.03) 100%) !important;
+  border: 1.5px solid rgba(255,255,255,0.20) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.16),
+    0 25px 70px rgba(0,0,0,0.55) !important;
+}
+
+/* Диагональный блик стекла, как на референсе */
+#auth-screen-root .glass-cozy-card::before {
+  content: "" !important;
+  position: absolute !important;
+  top: -10% !important;
+  left: -25% !important;
+  width: 75% !important;
+  height: 130% !important;
+  background: linear-gradient(120deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.12) 35%, transparent 55%) !important;
+  transform: rotate(-6deg) !important;
+  pointer-events: none !important;
+  opacity: 1 !important;
+}
+
+/* Основной текст на стекле — светлый (как на референсе) */
+#auth-screen-root .glass-cozy-card h1,
+#auth-screen-root .glass-cozy-card h2,
+#auth-screen-root .glass-cozy-card h3,
+#auth-screen-root .glass-cozy-card p:not(button *),
+#auth-screen-root .glass-cozy-card label:not(button *),
+#auth-screen-root .glass-cozy-card span:not(button *),
+#auth-screen-root .glass-cozy-card div:not(button *) {
+  color: rgba(255,255,255,0.92) !important;
+}
+
+/* Второстепенные подписи — чуть приглушённый белый, для иерархии */
+#auth-screen-root .glass-cozy-card .text-slate-400,
+#auth-screen-root .glass-cozy-card .text-slate-450,
+#auth-screen-root .glass-cozy-card .text-slate-500,
+#auth-screen-root .glass-cozy-card .text-slate-600 {
+  color: rgba(255,255,255,0.6) !important;
+}
+
+/* Акцентные цвета — оставляем читаемыми на стекле */
+#auth-screen-root .glass-cozy-card .text-emerald-600,
+#auth-screen-root .glass-cozy-card .text-emerald-400,
+#auth-screen-root .glass-cozy-card .text-emerald-500,
+#auth-screen-root .glass-cozy-card .text-emerald-800,
+#auth-screen-root .glass-cozy-card .text-emerald-450 {
+  color: #6ee7b7 !important;
+}
+#auth-screen-root .glass-cozy-card .text-blue-600,
+#auth-screen-root .glass-cozy-card .text-blue-500,
+#auth-screen-root .glass-cozy-card .text-blue-400 {
+  color: #93c5fd !important;
+}
+#auth-screen-root .glass-cozy-card .text-rose-700,
+#auth-screen-root .glass-cozy-card .text-rose-450 {
+  color: #fca5a5 !important;
+}
+
+/* Кнопка отправки формы (белая "таблетка") — текст остаётся тёмным для контраста */
+#auth-screen-root .glass-cozy-card button[type="submit"],
+#auth-screen-root .glass-cozy-card button[type="submit"] * {
+  color: #0f172a !important;
+}
+
+/* Поля ввода — тоже стеклянные, не сплошные белые */
+#auth-screen-root .glass-cozy-input {
+  background: rgba(255,255,255,0.16) !important;
+  border: 1.5px solid rgba(255,255,255,0.4) !important;
+  color: rgba(255,255,255,0.95) !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.08) !important;
+}
+#auth-screen-root .glass-cozy-input::placeholder {
+  color: rgba(255,255,255,0.5) !important;
+  opacity: 1 !important;
+}
+#auth-screen-root .glass-cozy-input:focus {
+  background: rgba(255,255,255,0.26) !important;
+  border-color: rgba(255,255,255,0.7) !important;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.15) !important;
+  color: #ffffff !important;
+}
+
+/* Чекбокс "Запомнить меня" */
+#auth-screen-root .glass-cozy-card input[type="checkbox"] {
+  accent-color: #ffffff;
+}
