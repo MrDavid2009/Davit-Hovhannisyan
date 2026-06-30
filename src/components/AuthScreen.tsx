@@ -316,9 +316,18 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                 </div>
               </div>
 
+              <label className="flex items-center gap-2 cursor-pointer select-none -mt-1">
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="w-4 h-4 rounded accent-rose-500 cursor-pointer"
+                />
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Запомнить меня</span>
+              </label>
+
               <button
                 type="submit"
-                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-transparent rounded-2xl shadow-lg shadow-pink-600/10 text-xs font-bold text-white bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 hover:from-pink-600 hover:to-indigo-700 active:scale-[0.985] transition-all cursor-pointer"
+                className="w-full flex justify-center items-center gap-2 py-3.5 px-4 border border-slate-200/70 dark:border-white/10 rounded-2xl shadow-sm text-xs font-bold text-slate-900 dark:text-white bg-white/80 dark:bg-white/10 hover:bg-white dark:hover:bg-white/15 active:scale-[0.985] transition-all cursor-pointer"
               >
                 Войти в кабинет
                 <ArrowRight className="w-4 h-4" />
@@ -451,7 +460,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                 <div className="w-full border-t border-slate-200/50 dark:border-slate-800/80" />
               </div>
               <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-[#fcfdfd] dark:bg-[#101424] px-4 text-slate-400 dark:text-slate-500 font-bold tracking-wider rounded-full py-0.5 border border-slate-200/40 dark:border-slate-850/30">Войти через</span>
+                <span className="bg-white/70 dark:bg-white/10 backdrop-blur-sm px-4 text-slate-500 dark:text-slate-300 font-bold tracking-wider rounded-full py-0.5 border border-slate-200/40 dark:border-white/15">Войти через</span>
               </div>
             </div>
 
@@ -460,7 +469,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                 type="button"
                 onClick={() => triggerSocialAuth('google')}
                 disabled={!!socialLoading}
-                className="flex justify-center items-center py-2.5 px-3 border border-slate-200/80 dark:border-slate-800/85 rounded-xl bg-white/60 dark:bg-slate-950/50 hover:bg-slate-50 dark:hover:bg-slate-900 text-xs font-medium text-slate-700 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
+                className="flex justify-center items-center py-2.5 px-3 border border-slate-200/70 dark:border-white/10 rounded-xl bg-white/80 dark:bg-white/8 hover:bg-white dark:hover:bg-white/15 text-xs font-medium text-slate-700 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
                 title="Google ID"
               >
                 {socialLoading === 'google' ? (
@@ -476,7 +485,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                 type="button"
                 onClick={() => triggerSocialAuth('telegram')}
                 disabled={!!socialLoading}
-                className="flex justify-center items-center py-2.5 px-3 border border-slate-200/80 dark:border-slate-800/85 rounded-xl bg-white/60 dark:bg-slate-950/50 hover:bg-slate-50 dark:hover:bg-slate-900 text-xs font-medium text-slate-750 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
+                className="flex justify-center items-center py-2.5 px-3 border border-slate-200/70 dark:border-white/10 rounded-xl bg-white/80 dark:bg-white/8 hover:bg-white dark:hover:bg-white/15 text-xs font-medium text-slate-750 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
                 title="Telegram Authenticator"
               >
                 {socialLoading === 'telegram' ? (
