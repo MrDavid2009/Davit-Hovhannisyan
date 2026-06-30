@@ -26,5 +26,5 @@ jobs:
           port: 22
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           local_path: './*'
-          remote_path: '/sever-18.ru/public_html'
+          remote_path: 'sever-18.ru/public_html'
           sftpArgs: '-o ConnectTimeout=30'
