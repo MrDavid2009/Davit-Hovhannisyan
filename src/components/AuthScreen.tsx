@@ -320,7 +320,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                 <input
                   type="checkbox"
                   defaultChecked
-                  className="w-4 h-4 rounded accent-rose-500 cursor-pointer"
+                  className="w-4 h-4 accent-red-500 cursor-pointer"
                 />
                 <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Запомнить меня</span>
               </label>
