@@ -18,13 +18,13 @@ jobs:
           npm install @tailwindcss/oxide-linux-x64-gnu --no-save
       - name: Build
         run: npm run build
-      - name: Deploy via SFTP
+      - name: Deploy via SFTP (SSH key)
         uses: wlixcc/SFTP-Deploy-Action@v1.2.4
         with:
-          username: ${{ secrets.FTP_USERNAME }}
+          username: mastesu6
           server: ${{ secrets.FTP_HOST }}
           port: 22
-          password: ${{ secrets.FTP_PASSWORD }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
           local_path: './*'
-          remote_path: '/'
+          remote_path: '/sever-18.ru/public_html'
           sftpArgs: '-o ConnectTimeout=30'
