@@ -6,19 +6,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Order, ChatMessage, Notification, PrintFile, FileFormatGroup, PaymentStatus, OrderStatus } from '../types';
 import { ThemeToggle } from './ThemeToggle';
+import { RatingWidget } from './RatingWidget';
 import { UserAvatar } from './UserAvatar';
+import logoImg from '../assets/logo.png';
 import { 
-  FileText, Upload, Trash2, Sliders, FileType, CheckCircle, Clock, 
+  FileText, Upload, Trash2, MapPin, Sliders, FileType, CheckCircle, Clock, 
   Send, MessageSquare, AlertCircle, Sparkles, CreditCard, Shield, 
-  FileCheck, LogOut, Check, ArrowDown, Bell, HelpCircle, Laptop,
+  FileCheck, LogOut, Check, ArrowDown, Bell, HelpCircle, Laptop, ArrowLeft,
   UserCheck, Layers, RefreshCw, Smartphone, Phone, Star, Trophy, Award, Share2, Copy, Mail, Gift,
-  Maximize2, Eye, ZoomIn, ZoomOut, RotateCw
+  Maximize2, Eye, ZoomIn, ZoomOut, RotateCw, Printer
 } from 'lucide-react';
 import { 
   calculateOrderCost, getFileFormatGroup, formatFileSize, 
   formatDateTime, getStatusLabel, getStatusColor, 
   getPaymentStatusLabel, getPaymentStatusColor, printInvoiceHTML,
-  getClientTierForUser, isWorkingHours
+  getClientTierForUser, isWorkingHours, showBrowserNotification
 } from '../utils';
 import { db, doc, setDoc, storage, ref, uploadBytes, getDownloadURL } from '../firebase';
 import { motion, AnimatePresence } from 'motion/react';
@@ -137,6 +139,45 @@ async function countPdfPages(file: File): Promise<number> {
   });
 }
 
+// Analyse color fill % from an image URL using Canvas API (0-100)
+// Works precisely for raster images; for PDFs uses the first-page preview.
+async function analyzeColorFill(imageUrl: string): Promise<number> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const MAX = 200;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(50); return; }
+        ctx.drawImage(img, 0, 0, w, h);
+        const data = ctx.getImageData(0, 0, w, h).data;
+        let coloredPixels = 0, total = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+          if (a < 30) continue;
+          total++;
+          const max = Math.max(r,g,b)/255, min = Math.min(r,g,b)/255;
+          const saturation = max === 0 ? 0 : (max - min) / max;
+          if (saturation > 0.15 && max < 0.97) coloredPixels++;
+        }
+        resolve(total === 0 ? 0 : Math.round((coloredPixels / total) * 100));
+      } catch { resolve(50); }
+    };
+    img.onerror = () => resolve(50);
+    img.src = imageUrl;
+  });
+}
+
+// Map fill % → price per page for color print on plain paper
+function colorFillPrice(pct: number) { return pct <= 20 ? 25 : pct <= 60 ? 40 : 65; }
+function colorFillLabel(pct: number) { return pct <= 20 ? 'Мелкий цвет' : pct <= 60 ? '~50% заливка' : '100% заливка'; }
+
 interface DashboardProps {
   user: User;
   onLogout: () => void;
@@ -157,11 +198,14 @@ interface DashboardProps {
 
 export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDeleteAccount }: DashboardProps) {
   // Navigation
-  const [activeTab, setActiveTab] = useState<'upload' | 'orders' | 'chat' | 'profile'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'orders' | 'chat' | 'profile' | 'contacts' | 'services'>('upload');
+  const [dismissedRatings, setDismissedRatings] = React.useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('dismissed_ratings') || '[]')); } catch { return new Set(); }
+  });
   
   // Visual Theme Customizer
   const [designTheme, setDesignTheme] = useState<'blue' | 'kraft' | 'cyber'>(() => {
-    return (localStorage.getItem('print_shop_design_theme') as 'blue' | 'kraft' | 'cyber') || 'blue';
+    return (localStorage.getItem('print_shop_design_theme') as 'blue' | 'kraft' | 'cyber') || 'cyber';
   });
 
   useEffect(() => {
@@ -227,6 +271,11 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   // Profile edit states
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  // Онбординг — показываем только новым клиентам (не видевшим раньше)
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('onboarding_seen');
+  });
+  const [activeLegalDoc, setActiveLegalDoc] = useState<'privacy' | 'terms' | 'delivery' | null>(null);
   const [editFullName, setEditFullName] = useState(user.fullName);
   const [editPhone, setEditPhone] = useState(user.phone || '');
   const [editAvatarUrl, setEditAvatarUrl] = useState(user.avatarUrl || '');
@@ -333,6 +382,31 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
     onUpdateDatabase({ users: updatedUsers });
     setIsEditingProfile(false);
   };
+
+  const [telegramLinking, setTelegramLinking] = useState(false);
+  const [telegramLinked, setTelegramLinked] = useState(!!user.telegramChatId);
+
+  const handleConnectTelegram = async () => {
+    setTelegramLinking(true);
+    try {
+      // Генерируем уникальный код
+      const code = 'u_' + user.id.slice(-6) + '_' + Math.random().toString(36).slice(2, 7);
+
+      // Сохраняем код на сервере
+      await fetch('https://www.sever-18.ru/api/telegram_link.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, userId: user.id })
+      });
+
+      // Открываем бота с кодом — клиент просто нажмёт Отправить
+      window.open(`https://t.me/photosever_bot?start=${code}`, '_blank');
+    } catch {
+      setShowInAppPush('Ошибка подключения. Попробуйте ещё раз.');
+    } finally {
+      setTelegramLinking(false);
+    }
+  };
   
   // File upload state
   const [uploadedFiles, setUploadedFiles] = useState<PrintFile[]>([]);
@@ -352,8 +426,10 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
+  const [selectedService, setSelectedService] = useState<{title: string; price: number} | null>(null);
   const [showTornPaperAnimation, setShowTornPaperAnimation] = useState(false);
   const [tornPromoCode, setTornPromoCode] = useState<string>('');
+
 
   const getActivePromo = () => {
     if (appliedPromo) return appliedPromo;
@@ -402,6 +478,48 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       setShowPromoGiftModal(true);
     }
   }, [user.promoCode, user.promoGiftedSeen]);
+
+  // Promo code weekly burn & push alerts check
+  useEffect(() => {
+    if (!user || !user.promoCode || !user.promoExpiresAt) return;
+
+    const expirationDate = new Date(user.promoExpiresAt);
+    const now = new Date();
+    const diffTime = expirationDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 0) {
+      // Burned/Expired!
+      showBrowserNotification(
+        'Промокод сгорел ⏳',
+        `Срок действия вашего промокода ${user.promoCode} истек.`
+      );
+      
+      const updatedUsers = database.users.map(u => {
+        if (u.id === user.id) {
+          const newUser = { ...u };
+          delete newUser.promoCode;
+          delete newUser.promoDiscount;
+          delete newUser.promoExpiresAt;
+          delete newUser.promoGiftedSeen;
+          return newUser;
+        }
+        return u;
+      });
+      onUpdateDatabase({ users: updatedUsers });
+      
+    } else if (diffDays <= 2) {
+      // Expiring soon warning (e.g., within 2 days)
+      const lastWarned = sessionStorage.getItem(`promo_burn_warned_${user.promoCode}`);
+      if (!lastWarned) {
+        showBrowserNotification(
+          'Промокод скоро сгорит! 🔥',
+          `Успейте использовать ваш промокод ${user.promoCode} (-${user.promoDiscount}%). Осталось всего ${diffDays} дн.!`
+        );
+        sessionStorage.setItem(`promo_burn_warned_${user.promoCode}`, 'true');
+      }
+    }
+  }, [user, database.users]);
 
   // Auto-dismiss the tearing animation after 5 seconds
   useEffect(() => {
@@ -507,6 +625,27 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   const [showSelfDeleteModal, setShowSelfDeleteModal] = useState(false);
   const [isDeletingSelf, setIsDeletingSelf] = useState(false);
   const [selfDeleteError, setSelfDeleteError] = useState<string | null>(null);
+
+  // Handle rating submission
+  const handleRate = (orderId: string, rating: 1|2|3|4|5, comment: string) => {
+    const updatedOrders = database.orders.map(o =>
+      o.id === orderId ? { ...o, rating, ratingComment: comment } : o
+    );
+    onUpdateDatabase({ orders: updatedOrders });
+    setDismissedRatings(prev => {
+      const next = new Set(prev); next.add(orderId);
+      localStorage.setItem('dismissed_ratings', JSON.stringify([...next]));
+      return next;
+    });
+  };
+
+  const handleDismissRating = (orderId: string) => {
+    setDismissedRatings(prev => {
+      const next = new Set(prev); next.add(orderId);
+      localStorage.setItem('dismissed_ratings', JSON.stringify([...next]));
+      return next;
+    });
+  };
 
   // Filter database objects belonging to this user
   const userOrders = database.orders.filter(o => o.userId === user.id);
@@ -629,12 +768,31 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
   const uploadFileToFirebaseStorage = async (file: File, fileId: string) => {
     try {
-      const fileRef = ref(storage, `users/${user.id}/files/${Date.now()}_${file.name}`);
-      const snapshot = await uploadBytes(fileRef, file);
-      const downloadUrl = await getDownloadURL(snapshot.ref);
-      setUploadedFiles(prev => prev.map(f => f.id === fileId ? { ...f, url: downloadUrl } : f));
-    } catch (error) {
-      console.error('Firebase Storage upload error for fileId ' + fileId + ':', error);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', user.id);
+
+      const response = await fetch('https://sever-18.ru/api/upload.php', {
+        method: 'POST',
+        body: formData,
+        redirect: 'follow'
+      });
+
+      if (!response.ok) {
+        throw new Error('Сервер вернул ошибку: ' + response.status);
+      }
+
+      const data = await response.json();
+      if (!data.success || !data.url) {
+        throw new Error(data.error || 'Не удалось загрузить файл');
+      }
+
+      setUploadedFiles(prev => prev.map(f => f.id === fileId ? { ...f, url: data.url } : f));
+    } catch (error: any) {
+      console.error('Server upload error for fileId ' + fileId + ':', error);
+      const errMsg = error?.message || String(error) || 'Неизвестная ошибка';
+      setUploadError(`Ошибка: ${errMsg}`);
+      setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
     }
   };
 
@@ -674,6 +832,13 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       if (isPdf) {
         countPdfPages(file).then(pages => {
           setUploadedFiles(prev => prev.map(f => f.id === fileId ? { ...f, pageCount: pages } : f));
+        });
+      }
+
+      // Auto-detect color fill % for images and PDFs (using preview)
+      if (previewUrl) {
+        analyzeColorFill(previewUrl).then(pct => {
+          setUploadedFiles(prev => prev.map(f => f.id === fileId ? { ...f, colorFillPercent: pct } : f));
         });
       }
 
@@ -779,22 +944,45 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
     }
     if (uploadedFiles.length === 0) return;
 
+    const stillUploading = uploadedFiles.some(f => !f.url);
+    if (stillUploading) {
+      setUploadError("Пожалуйста, подождите, пока все файлы загрузятся в облако.");
+      return;
+    }
+
+    // Проверяем что для фотобумаги выбран размер
+    const missingSize = uploadedFiles.find(f => f.paperType === 'photo' && !f.photoSize);
+    if (missingSize || (paperType === 'glossy' || paperType === 'matte') && !photoSize) {
+      setUploadError("Пожалуйста, выберите размер фотографии (10×15, 13×18, 15×21 и т.д.) перед отправкой заказа.");
+      return;
+    }
+
     const finalPromo = getActivePromo();
     const finalDiscount = finalPromo ? getActiveDiscountPercent(finalPromo) : undefined;
 
-    const calculatedDensity = (paperType === 'glossy' || paperType === 'matte') ? photoSize : paperDensity;
-    const totalCost = calculateOrderCost(
-      uploadedFiles.length,
-      copies,
-      paperType,
-      printColor,
-      calculatedDensity,
-      uploadedFiles,
-      (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-      binding,
-      finalPromo || undefined,
-      finalDiscount
-    );
+    // Считаем итоговую стоимость из per-file настроек
+    const photoSizePrices: Record<string, number> = {
+      '10x15': 20, 'polaroid': 30, '13x18': 50, '15x21': 70, '20x30': 100, '30x40': 250
+    };
+    const subtotal = uploadedFiles.reduce((acc, f) => {
+      const isPhotoFile = f.paperType === 'photo';
+      const fileCopies = f.fileCopies || 1;
+      const pages = f.pageCount || 1;
+      const fillPct = f.colorFillPercent ?? 50;
+      const isA3 = f.format === 'a3';
+      const pp = isPhotoFile
+        ? (photoSizePrices[f.photoSize || '10x15'] || 20)
+        : ((f.printColor || 'bw') === 'bw'
+          ? (isA3 ? 100 : 20)
+          : (isA3 ? 150 : (fillPct <= 20 ? 25 : fillPct <= 60 ? 40 : 65)));
+      return acc + pp * (isPhotoFile ? 1 : pages) * fileCopies;
+    }, 0);
+    const totalCost = finalDiscount ? Math.round(subtotal * (1 - finalDiscount / 100)) : subtotal;
+
+    // Если заказ из витрины услуг — добавляем цену услуги
+    const serviceExtra = selectedService?.price || 0;
+    const finalTotalCost = totalCost + serviceExtra;
+
     const orderId = `ORD-${1000 + database.orders.length + 1}`;
 
     const newOrder: Order = {
@@ -805,15 +993,14 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       files: uploadedFiles,
       orderDate: new Date().toISOString(),
       status: 'pending',
-      totalCost,
+      totalCost: finalTotalCost,
       paymentStatus: 'unpaid',
-      paperType,
-      paperDensity: calculatedDensity,
-      photoSize: (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-      printColor,
-      copies,
+      paperType: uploadedFiles[0]?.paperType === 'photo' ? 'glossy' : 'standard',
+      paperDensity: 'regular',
+      printColor: (uploadedFiles[0]?.printColor || 'bw') as 'bw' | 'color' | 'color_full',
+      copies: uploadedFiles[0]?.fileCopies || 1,
       notes: notes.trim(),
-      binding,
+      binding: 'none',
       promoCode: finalPromo || undefined,
       promoDiscount: finalDiscount
     };
@@ -837,25 +1024,73 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       });
     }
 
-    onUpdateDatabase({
-      orders: [newOrder, ...database.orders],
-      users: updatedUsers
-    });
+    // Сохраняем данные заказа временно в sessionStorage
+    // Заказ будет создан в Firebase только после успешной оплаты
+    const pendingOrder = {
+      ...newOrder,
+      files: newOrder.files.map(f => ({
+        id: f.id,
+        name: f.name,
+        size: f.size,
+        url: f.url || '',
+        paperType: f.paperType || 'plain',
+        printColor: f.printColor || 'bw',
+        fileCopies: f.fileCopies || 1,
+        photoSize: f.photoSize || null,
+        formatGroup: f.formatGroup || 'other',
+        pageCount: f.pageCount || 1,
+        colorFillPercent: f.colorFillPercent || 0,
+      }))
+    };
+    sessionStorage.setItem('pending_order', JSON.stringify(pendingOrder));
 
-    // Clear uploader and options state
-    setUploadedFiles([]);
-    setNotes('');
-    setBinding('none');
-    setAppliedPromo(null);
-    setPromoCode('');
-    setPromoError(null);
-    
-    // Jump to orders tab
-    setActiveTab('orders');
+    // Показываем что идёт обработка
+    setUploadError('');
+    const btn = document.querySelector('button[type="submit"]') as HTMLButtonElement;
+    if (btn) { btn.disabled = true; btn.textContent = 'Создаём платёж...'; }
 
-    // Automatically prompt to pay this order
-    setPayingOrder(newOrder);
-    
+    // Создаём платёж в ЮKassa
+    (async () => {
+      try {
+        const res = await fetch('https://sever-18.ru/api/payment-create.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, amount: finalTotalCost, email: user.email }),
+        });
+        const data = await res.json();
+
+        if (data.paymentUrl && data.paymentId) {
+          const updated = { ...pendingOrder, transactionId: data.paymentId };
+          sessionStorage.setItem('pending_order', JSON.stringify(updated));
+          setUploadedFiles([]);
+          setNotes('');
+          setBinding('none');
+          setAppliedPromo(null);
+          setPromoCode('');
+          setPromoError(null);
+          setSelectedService(null);
+          setActiveTab('orders');
+          window.location.href = data.paymentUrl;
+        } else {
+          // ЮKassa недоступна — сохраняем заказ и показываем модалку
+          await setDoc(doc(db, 'orders', orderId), pendingOrder);
+          onUpdateDatabase({ orders: [newOrder, ...database.orders], users: updatedUsers });
+          setUploadedFiles([]);
+          setNotes('');
+          setBinding('none');
+          setAppliedPromo(null);
+          setPromoCode('');
+          setPromoError(null);
+          setActiveTab('orders');
+          setPayingOrder(newOrder);
+        }
+      } catch (err) {
+        console.error('Payment error:', err);
+        setUploadError('Ошибка создания платежа. Попробуйте ещё раз.');
+        if (btn) { btn.disabled = false; btn.textContent = 'Оформить заказ'; }
+      }
+    })();
+
     // Play a gentle confirm alert sound
     playPlaceOrderSound();
   };
@@ -967,25 +1202,9 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
           type: 'payment'
         };
 
-        // Standard automated welcome computer chat reply
-        const autoReply: ChatMessage = {
-          id: 'chat_pay_rep_' + Date.now(),
-          userId: user.id,
-          senderId: 'u1', // Admin ID
-          senderRole: 'admin',
-          senderName: 'Дмитрий (Администратор)',
-          message: isOnReceipt 
-            ? `Здравствуйте, ${user.fullName}! Ваш заказ ${payingOrder.id} на сумму ₽${payingOrder.totalCost} принят в работу с оплатой при получении. Файлы уже загружены, я приступаю к печати. Вы сможете расплатиться картой или наличными при выдаче!`
-            : `Здравствуйте, ${user.fullName}! Оплату по заказу ${payingOrder.id} на сумму ₽${payingOrder.totalCost} успешно получили. Файлы уже загружены ко мне на ПК. Я приступаю к печати, вышлю статус готовности!`,
-          timestamp: new Date().toISOString(),
-          readByAdmin: true,
-          readByClient: false
-        };
-
         onUpdateDatabase({
           orders: updatedOrders,
-          notifications: [successNotif, ...database.notifications],
-          chatMessages: [...database.chatMessages, autoReply]
+          notifications: [successNotif, ...database.notifications]
         });
 
         // Close modal
@@ -1022,43 +1241,6 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
     });
 
     setChatInput('');
-
-    // Simulate smart Admin AI/Staff quick auto interaction after 2.5 seconds
-    setTimeout(() => {
-      let responseText = '';
-      if (!isWorkingHours()) {
-        responseText = `Здравствуйте! К сожалению, сейчас нерабочее время. Пожалуйста, обращайтесь в рабочие часы:\n\n📅 Пн-Пт: 09:00 — 19:00\n📅 Сб-Вс: 10:00 — 19:00\n\nВ нерабочее время новые заказы/файлы не принимаются и консультации не проводятся. Ждем вас в рабочее время!`;
-      } else {
-        const activePendingOrders = database.orders.filter(o => o.userId === user.id && o.status !== 'printed');
-        responseText = `Добрый день! Ваш файл у меня на компьютере. Мы подготавливаем печатную партию. Будет сделано в лучшем виде!`;
-        
-        if (activePendingOrders.length > 0) {
-          const targetO = activePendingOrders[0];
-          responseText = `Ваш заказ ${targetO.id} со статусом "${getStatusLabel(targetO.status as any)}" прямо сейчас в приоритете. Ожидайте уведомление о полной готовности в кабинете!`;
-        }
-      }
-
-      const adminReply: ChatMessage = {
-        id: 'c_auto_' + Date.now(),
-        userId: user.id,
-        senderId: 'u1',
-        senderRole: 'admin',
-        senderName: 'Дмитрий (Администратор)',
-        message: responseText,
-        timestamp: new Date().toISOString(),
-        readByAdmin: true,
-        readByClient: false
-      };
-
-      onUpdateDatabase({
-        chatMessages: [...database.chatMessages, newMsg, adminReply]
-      });
-
-      // Show in-app notice
-      setShowInAppPush(`Новое сообщение от Администратора в чате.`);
-      setTimeout(() => setShowInAppPush(null), 4000);
-
-    }, 2500);
   };
 
   const handleRequestPushPermission = () => {
@@ -1090,12 +1272,10 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   };
 
   return (
-    <div id="client-dashboard-root" className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-300 relative overflow-hidden">
+    <div id="client-dashboard-root" className="liquid-glass-bg min-h-screen md:h-screen text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-300 relative overflow-x-hidden overflow-y-auto md:overflow-hidden">
       
-      {/* Exquisite Graphic 3D background glows inspired by Premium Theme 2 (Cozy Glassmorphic with soft pastel glow) */}
-      <div className="absolute top-[10%] left-[20%] w-[500px] h-[500px] rounded-full bg-violet-400/12 dark:bg-violet-600/15 blur-[130px] animate-glow-slow-1 pointer-events-none" />
-      <div className="absolute bottom-[20%] right-[10%] w-[550px] h-[550px] rounded-full bg-pink-400/12 dark:bg-pink-600/15 blur-[140px] animate-glow-slow-2 pointer-events-none" />
-      <div className="absolute top-[60%] left-[-10%] w-[400px] h-[400px] rounded-full bg-cyan-400/8 dark:bg-cyan-600/10 blur-[120px] animate-glow-slow-1 pointer-events-none" />
+      {/* Neutral frosted glow accents (no color tint) */}
+      
 
       {/* Floating 3D Frosted Glass Orbs mirroring the uploaded design */}
       <div className="glass-bg-orb w-[200px] h-[200px] top-[15%] left-[10%] opacity-65 animate-[float-slow_24s_infinite_ease-in-out]" style={{ backdropFilter: 'blur(15px) saturate(120%)' }} />
@@ -1115,43 +1295,44 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       )}
 
       {/* LEFT NAVIGATION COLUMN - Responsive Responsive Sidebar */}
-      <aside className="w-full md:w-64 border-s-0 md:border-r border-b md:border-b-0 border-pink-500/10 bg-[#160d2e]/85 backdrop-blur-xl text-white shrink-0 flex flex-row md:flex-col justify-between p-4 md:py-6 md:px-5 transition-colors relative z-10">
+      <aside className="w-full md:w-64 shrink-0 flex flex-row md:flex-col justify-between p-3 md:py-6 md:px-4 transition-colors relative z-10" style={{background:"rgba(255,255,255,0.06)",backdropFilter:"blur(40px)",borderRight:"1px solid rgba(255,255,255,0.1)",borderBottom:"1px solid rgba(255,255,255,0.08)"}}>
         
         {/* Brand / Mini Logo */}
         <div className="hidden md:flex items-center gap-3 mb-8">
-          <div className="squircle-3d-tile tile-3d-orange w-11 h-11 shrink-0 scale-105 shadow-lg">
-            <FileText className="w-5 h-5 text-white icon-3d-svg" />
-          </div>
+          <img src={logoImg} alt="Фото-Север" className="w-10 h-10 shrink-0 object-contain drop-shadow-lg" />
           <div>
             <h2 className="text-md font-bold tracking-tight text-white leading-tight">Фото-Север</h2>
-            <span className="text-[10px] uppercase font-bold tracking-widest text-[#a5b4fc]">Северное шоссе, 18</span>
+            <span className="text-[10px] uppercase font-bold tracking-widest text-white/60">Северное шоссе, 18</span>
           </div>
         </div>
 
         {/* Sync Indicator */}
         <div className="hidden md:flex items-center gap-2 mb-6 px-3 py-2 bg-slate-900/40 dark:bg-black/30 border border-slate-800 dark:border-slate-850 rounded-xl text-[11px] text-[#cbd5e1]">
           <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-400 icon-3d-svg" />
-          <span className="font-medium">Мульти-автосинхронизация</span>
+          <span className="font-medium">Синхронизация данных</span>
         </div>
 
         {/* Nav Links */}
-        <nav className="flex md:flex-col flex-1 gap-2.5 md:gap-2 justify-around md:justify-start w-full relative">
+        <nav className="flex md:flex-col flex-1 gap-1 md:gap-1 justify-around md:justify-start w-full relative">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`relative flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
+            className={`relative flex items-center gap-2 md:gap-3 px-3 py-2.5 md:py-3 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
               activeTab === 'upload' 
-                ? 'text-white font-black' 
-                : 'text-[#cbd5e1] hover:bg-slate-800/40 hover:text-white'
+                ? 'font-black' 
+                : 'hover:text-white'
             }`}
+            style={{
+              color: activeTab === 'upload' ? '#e8f000' : 'rgba(255,255,255,0.55)',
+            }}
           >
             {activeTab === 'upload' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 bg-white/15 dark:bg-white/10 rounded-2xl -z-10 shadow-inner border border-white/10"
+                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
-            <div className={`squircle-3d-tile tile-3d-cyber w-9 h-9 shrink-0 ${activeTab === 'upload' ? 'squircle-3d-active scale-105' : 'opacity-90'}`}>
+            <div className={`glass-icon-capsule capsule-glow-purple shrink-0 ${activeTab === 'upload' ? 'scale-105' : 'opacity-90'}`}>
               <Upload className="w-4.5 h-4.5 text-white icon-3d-svg" />
             </div>
             <span className="hidden sm:inline z-10">Загрузка и Заказ</span>
@@ -1159,20 +1340,23 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
           <button
             onClick={() => setActiveTab('orders')}
-            className={`relative flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
+            className={`relative flex items-center gap-2 md:gap-3 px-3 py-2.5 md:py-3 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
               activeTab === 'orders' 
-                ? 'text-white font-black' 
-                : 'text-[#cbd5e1] hover:bg-slate-800/40 hover:text-white'
+                ? 'font-black' 
+                : 'hover:text-white'
             }`}
+            style={{
+              color: activeTab === 'orders' ? '#e8f000' : 'rgba(255,255,255,0.55)',
+            }}
           >
             {activeTab === 'orders' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 bg-white/15 dark:bg-white/10 rounded-2xl -z-10 shadow-inner border border-white/10"
+                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
-            <div className={`squircle-3d-tile tile-3d-violet w-9 h-9 shrink-0 relative ${activeTab === 'orders' ? 'squircle-3d-active scale-105' : 'opacity-90'}`}>
+            <div className={`glass-icon-capsule capsule-glow-indigo shrink-0 relative ${activeTab === 'orders' ? 'scale-105' : 'opacity-90'}`}>
               <Clock className="w-4.5 h-4.5 text-white icon-3d-svg" />
               {userOrders.filter(o => o.status !== 'printed').length > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-[#ef4444] z-10 animate-ping border border-white" />
@@ -1183,20 +1367,23 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
           <button
             onClick={() => setActiveTab('chat')}
-            className={`relative flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
+            className={`relative flex items-center gap-2 md:gap-3 px-3 py-2.5 md:py-3 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
               activeTab === 'chat' 
-                ? 'text-white font-black' 
-                : 'text-[#cbd5e1] hover:bg-slate-800/40 hover:text-white'
+                ? 'font-black' 
+                : 'hover:text-white'
             }`}
+            style={{
+              color: activeTab === 'chat' ? '#e8f000' : 'rgba(255,255,255,0.55)',
+            }}
           >
             {activeTab === 'chat' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 bg-white/15 dark:bg-white/10 rounded-2xl -z-10 shadow-inner border border-white/10"
+                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
-            <div className={`squircle-3d-tile tile-3d-green w-9 h-9 shrink-0 relative ${activeTab === 'chat' ? 'squircle-3d-active scale-105' : 'opacity-90'}`}>
+            <div className={`glass-icon-capsule capsule-glow-green shrink-0 relative ${activeTab === 'chat' ? 'scale-105' : 'opacity-90'}`}>
               <MessageSquare className="w-4.5 h-4.5 text-white icon-3d-svg" />
               {unreadChatsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center z-10 animate-bounce border border-white shadow-md">
@@ -1218,11 +1405,11 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'profile' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 bg-white/15 dark:bg-white/10 rounded-2xl -z-10 shadow-inner border border-white/10"
+                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
-            <div className={`squircle-3d-tile tile-3d-rainbow w-9 h-9 shrink-0 relative ${activeTab === 'profile' ? 'squircle-3d-active scale-105' : 'opacity-90'}`}>
+            <div className={`glass-icon-capsule capsule-glow-rainbow shrink-0 relative ${activeTab === 'profile' ? 'scale-105' : 'opacity-90'}`}>
               <UserCheck className="w-4.5 h-4.5 text-white icon-3d-svg" />
               {unreadNotificationsCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[9px] font-black w-5 h-5 rounded-full flex items-center justify-center z-10 border border-white shadow-md">
@@ -1232,6 +1419,53 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             </div>
             <span className="hidden sm:inline z-10">Кабинет & Инфо</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('contacts')}
+            className={`relative flex items-center gap-2 md:gap-3 px-3 py-2.5 md:py-3 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
+              activeTab === 'contacts' 
+                ? 'font-black' 
+                : 'hover:text-white'
+            }`}
+            style={{
+              color: activeTab === 'contacts' ? '#e8f000' : 'rgba(255,255,255,0.55)',
+            }}
+          >
+            {activeTab === 'contacts' && (
+              <motion.div 
+                layoutId="active-sidebar-pill"
+                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+            <div className={`glass-icon-capsule capsule-glow-cyan shrink-0 ${activeTab === 'contacts' ? 'scale-105' : 'opacity-90'}`}>
+              <Phone className="w-4.5 h-4.5 text-white icon-3d-svg" />
+            </div>
+            <span className="hidden sm:inline z-10">Контакты</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('services')}
+            className={`relative flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial cursor-pointer ${
+              activeTab === 'services'
+                ? 'text-white font-black'
+                : 'text-[#cbd5e1] hover:bg-slate-800/40 hover:text-white'
+            }`}
+          >
+            {activeTab === 'services' && (
+              <motion.div
+                layoutId="active-sidebar-pill"
+                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+              />
+            )}
+            <div className={`glass-icon-capsule capsule-glow-orange shrink-0 ${activeTab === 'services' ? 'scale-105' : 'opacity-90'}`}>
+              <Printer className="w-4.5 h-4.5 text-white icon-3d-svg" />
+            </div>
+            <span className="hidden sm:inline z-10">Услуги</span>
+          </button>
+
+
         </nav>
 
         {/* Short info bottom */}
@@ -1253,6 +1487,13 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             <LogOut className="w-3.5 h-3.5" />
             Выйти из кабинета
           </button>
+          <div className="flex justify-center gap-2.5 mt-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest border-t border-slate-800/50 pt-2.5">
+            <button onClick={() => setActiveLegalDoc('privacy')} className="hover:text-indigo-400 cursor-pointer transition-colors">Политика</button>
+            <span>&bull;</span>
+            <button onClick={() => setActiveLegalDoc('terms')} className="hover:text-indigo-400 cursor-pointer transition-colors">Оферта</button>
+            <span>&bull;</span>
+            <button onClick={() => setActiveLegalDoc('delivery')} className="hover:text-indigo-400 cursor-pointer transition-colors">Возврат</button>
+          </div>
         </div>
       </aside>
 
@@ -1260,12 +1501,24 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       <main className="flex-1 flex flex-col min-w-0 bg-slate-50/40 dark:bg-slate-950/50 backdrop-blur-md relative z-10">
         
         {/* Top bar on small / medium devices for header */}
-        <header id="dashboard-header" className="md:hidden flex items-center justify-between px-4 py-3 bg-white/70 dark:bg-slate-900/60 border-b border-slate-150 dark:border-slate-800 backdrop-blur-md">
+        <header id="dashboard-header" className="md:hidden flex items-center justify-between px-4 py-3 glass-panel">
           <div className="flex items-center gap-2">
-            <div className="squircle-3d-tile tile-3d-orange w-8 h-8 shrink-0 shadow-sm">
-              <FileText className="w-4 h-4 text-white icon-3d-svg" />
-            </div>
-            <h1 className="text-sm font-black text-slate-900 dark:text-white leading-none">Фото-Север</h1>
+            {activeTab !== 'upload' ? (
+              <button
+                onClick={() => setActiveTab('upload')}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer shrink-0"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Назад
+              </button>
+            ) : (
+              <>
+                <div className="squircle-3d-tile tile-3d-orange w-8 h-8 shrink-0 shadow-sm">
+                  <FileText className="w-4 h-4 text-white icon-3d-svg" />
+                </div>
+                <h1 className="text-sm font-black text-slate-900 dark:text-white leading-none font-bold">Фото-Север</h1>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
@@ -1278,20 +1531,35 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
           </div>
         </header>
 
-        <header className="hidden md:flex items-center justify-between px-8 py-5 bg-white dark:bg-slate-900 border-b border-slate-150 dark:border-slate-800">
-          <div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white">
-              {activeTab === 'upload' && 'Загрузка документов для печати'}
-              {activeTab === 'orders' && 'Статус печати в реальном времени'}
-              {activeTab === 'chat' && 'Диалог с оператором типографии'}
-              {activeTab === 'profile' && 'Личный кабинет и безопасность'}
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {activeTab === 'upload' && 'Загружайте любые форматы файлов и отправляйте нам'}
-              {activeTab === 'orders' && 'Выгрузка актов, проведение защищенных интернет-транзакций, отслеживание выполнения заказа'}
-              {activeTab === 'chat' && 'Моментальная обратная связь, согласование правок, уведомление об изменениях'}
-              {activeTab === 'profile' && 'Управление учетными записями, очистка кеша, социальные связи'}
-            </p>
+        <header className="hidden md:flex items-center justify-between px-8 py-5 glass-panel">
+          <div className="flex items-center gap-4">
+            {activeTab !== 'upload' && (
+              <button
+                onClick={() => setActiveTab('upload')}
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-black text-slate-700 dark:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer shrink-0 border border-slate-200/40 dark:border-slate-800"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Вернуться назад
+              </button>
+            )}
+            <div>
+              <h1 className="text-xl font-black text-slate-900 dark:text-white">
+                {activeTab === 'upload' && 'Загрузка документов для печати'}
+                {activeTab === 'orders' && 'Статус печати в реальном времени'}
+                {activeTab === 'chat' && 'Диалог с оператором типографии'}
+                {activeTab === 'profile' && 'Личный кабинет и безопасность'}
+                {activeTab === 'contacts' && 'Контакты студии'}
+                {activeTab === 'services' && 'Наши услуги'}
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                {activeTab === 'upload' && 'Загружайте любые форматы файлов и отправляйте нам'}
+                {activeTab === 'orders' && 'Выгрузка актов, проведение защищенных интернет-транзакций, отслеживание выполнения заказа'}
+                {activeTab === 'chat' && 'Моментальная обратная связь, согласование правок, уведомление об изменениях'}
+                {activeTab === 'profile' && 'Управление учетными записями, очистка кеша, социальные связи'}
+                {activeTab === 'contacts' && 'Мы всегда на связи — звоните или пишите'}
+                {activeTab === 'services' && 'Печать документов, фотографий, чертежей — всё на Северном шоссе, 18'}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -1299,10 +1567,10 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {pushConsent === 'default' && (
               <button
                 onClick={handleRequestPushPermission}
-                className="flex items-center gap-2 py-1.5 px-3 bg-amber-500/10 hover:bg-amber-550/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-xl text-[11px] font-bold"
+                className="flex items-center justify-center w-9 h-9 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 rounded-xl transition-all"
+                title="Включить уведомления о статусе заказа"
               >
-                <Bell className="w-3.5 h-3.5" />
-                Включить push статусы
+                <Bell className="w-4 h-4" />
               </button>
             )}
             {pushConsent === 'granted' && (
@@ -1312,14 +1580,14 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             )}
             
             <ThemeToggle />
-            <div className="text-indigo-600 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-full w-9 h-9 flex items-center justify-center font-bold text-sm">
+            <div className="text-indigo-600 dark:text-white bg-slate-100 dark:bg-slate-800 rounded-xl w-9 h-9 flex items-center justify-center font-bold text-sm">
               {user.fullName[0].toUpperCase()}
             </div>
           </div>
         </header>
 
         {/* WORKSPACE SECTIONS */}
-        <div className="flex-1 p-4 md:p-8 space-y-6 overflow-y-auto max-w-6xl w-full mx-auto">
+        <div className="flex-1 p-4 md:p-8 space-y-6 max-w-6xl w-full mx-auto min-h-0 flex flex-col md:overflow-hidden">
           {user.promoCode && (
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1364,11 +1632,11 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full"
+                className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start w-full md:overflow-y-auto md:flex-1 min-h-0 pr-1"
               >
                 
                 {/* Interactive Step Timeline Indicator */}
-                <div className="lg:col-span-12 bg-white dark:bg-slate-900 rounded-3xl p-5 border border-slate-150 dark:border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm md:px-8 relative overflow-hidden">
+                <div className="lg:col-span-12 glass-panel rounded-3xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 md:px-8 relative overflow-hidden">
                   {/* Decorative faint background glowing pattern */}
                   <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
                   
@@ -1480,7 +1748,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                     multiple
                     onChange={handleFileInput}
                     className="hidden"
-                    accept=".zip,.rar,.7z,.doc,.docx,.pdf,.xls,.xlsx,.txt,.png,.jpg,.jpeg"
+                    accept=".zip,.rar,.7z,.doc,.docx,.pdf,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.heic,.heif,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   />
                   
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
@@ -1517,39 +1785,182 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                       </button>
                     </div>
 
-                    <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1">
-                      {uploadedFiles.map(file => (
-                        <div
-                          key={file.id}
-                          className="flex items-center justify-between p-3.5 bg-slate-100/50 dark:bg-slate-950/30 rounded-2xl border border-slate-200/40 dark:border-slate-800/60 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="p-2.5 bg-white dark:bg-slate-900 rounded-xl shrink-0 text-indigo-600 shadow-sm">
-                              <FileType className="w-5 h-5" />
+                    <div className="space-y-3 pr-1">
+                      {uploadedFiles.map(file => {
+                        const isPhoto = file.paperType === 'photo';
+                        const updateFile = (updates: Partial<typeof file>) => {
+                          setUploadedFiles(prev => prev.map(f => f.id === file.id ? { ...f, ...updates } : f));
+                        };
+                        const photoSizes = [
+                          { key: '10x15', label: '10×15', sub: 'стандарт', price: 20 },
+                          { key: 'polaroid', label: 'Полароид', sub: 'квадрат', price: 30 },
+                          { key: '13x18', label: '13×18', sub: 'средний', price: 50 },
+                          { key: '15x21', label: '15×21', sub: 'большой', price: 70 },
+                          { key: '20x30', label: '20×30', sub: 'постер', price: 100 },
+                          { key: '30x40', label: '30×40', sub: 'большой постер', price: 250 },
+                        ] as const;
+                        const selSize = photoSizes.find(s => s.key === (file.photoSize || '10x15')) || photoSizes[0];
+                        const copies = file.fileCopies || 1;
+                        const pages = file.pageCount || 1;
+                        const fillPct = file.colorFillPercent ?? 50;
+                        const isA3 = file.format === 'a3';
+                        const filePP = isPhoto ? selSize.price
+                          : (file.printColor === 'bw'
+                            ? (isA3 ? 100 : 20)
+                            : (isA3 ? 150 : colorFillPrice(fillPct)));
+                        const fileCost = filePP * (isPhoto ? 1 : pages) * copies;
+
+                        return (
+                          <div key={file.id} className="glass-panel rounded-2xl overflow-hidden">
+                            {/* Строка файла */}
+                            <div className="flex items-center gap-3 p-3.5">
+                              <div className="p-2.5 glass-icon-capsule glass-icon-indigo shrink-0">
+                                <FileType className="w-4 h-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{file.name}</p>
+                                <span className="text-[10px] text-white/40 block mt-0.5">
+                                  {formatFileSize(file.size)} · {file.formatGroup.toUpperCase()}
+                                  {file.pageCount !== undefined ? ` · ${file.pageCount} стр.` : ' · сканирование...'}
+                                  {file.url ? ' · ✓ Загружено' : ' · Загрузка...'}
+                                  {file.colorFillPercent !== undefined && (file.printColor || 'bw') !== 'bw' && !isPhoto && (
+                                    <span className="text-amber-400 font-black ml-1"> · 🎨 {colorFillLabel(file.colorFillPercent)} ({file.colorFillPercent}%)</span>
+                                  )}
+                                  {file.previewUrl && <span onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }} className="text-indigo-400 font-black ml-1.5 cursor-pointer hover:underline">· 👁 Предпросмотр</span>}
+                                </span>
+                              </div>
+                              <button type="button" onClick={() => removeUploadedFile(file.id)}
+                                className="p-1.5 text-white/25 hover:text-rose-400 transition-colors cursor-pointer shrink-0">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
-                            <div className="overflow-hidden">
-                              <p className="text-xs font-bold text-slate-800 dark:text-white truncate">
-                                {file.name}
-                              </p>
-                              <span className="text-[10px] font-medium text-slate-400 block mt-0.5 animate-fade-in">
-                                {formatFileSize(file.size)} &bull; {file.formatGroup.toUpperCase()} 
-                                {file.pageCount !== undefined ? ` &bull; Скан: ${file.pageCount} стр.` : ' &bull; сканирование...'}
-                                {file.url ? ' &bull; Облако: Загружено' : ' &bull; Загрузка в облако...'}
-                                {file.previewUrl && <span onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }} className="text-indigo-600 font-black ml-1.5 cursor-pointer hover:underline">&bull; &#128065; Предпросмотр</span>}
-                              </span>
+
+                            {/* Настройки печати */}
+                            <div className="border-t border-white/8 p-3.5 space-y-3">
+                              <div className="grid grid-cols-2 gap-2.5">
+                                {/* Цветность */}
+                                <div>
+                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Цветность</p>
+                                  <div className="flex gap-1.5">
+                                    {(['bw','color'] as const).map(v => {
+                                      const isPhoto = file.paperType === 'photo';
+                                      const isDisabled = v === 'bw' && isPhoto;
+                                      return (
+                                        <button key={v}
+                                          onClick={() => {
+                                            if (isDisabled) return;
+                                            updateFile({ printColor: v });
+                                          }}
+                                          disabled={isDisabled}
+                                          title={isDisabled ? 'Для фотобумаги доступна только цветная печать' : ''}
+                                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all ${
+                                            isDisabled
+                                              ? 'bg-white/3 border-white/8 text-white/20 cursor-not-allowed opacity-40'
+                                              : (file.printColor || 'bw') === v
+                                              ? 'option-pill-active cursor-pointer'
+                                              : 'option-pill-inactive cursor-pointer'
+                                          }`}>
+                                          {v === 'bw' ? 'Ч/Б' : 'Цвет'}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                                {/* Бумага */}
+                                <div>
+                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Бумага</p>
+                                  <div className="flex gap-1.5">
+                                    {(['plain','photo'] as const).map(v => (
+                                      <button key={v} onClick={() => updateFile({ 
+                                        paperType: v, 
+                                        photoSize: v === 'photo' ? (file.photoSize || '10x15') : undefined,
+                                        printColor: v === 'photo' ? 'color' : file.printColor, // фото = только цвет
+                                      })}
+                                        className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
+                                          (file.paperType || 'plain') === v
+                                            ? 'option-pill-active'
+                                            : 'option-pill-inactive'}`}>
+                                        {v === 'plain' ? 'Обычная' : 'Фото 🖼'}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Формат — только для обычной бумаги */}
+                                {!isPhoto && (
+                                  <div>
+                                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Формат</p>
+                                    <div className="flex gap-1.5">
+                                      {(['a4','a3'] as const).map(v => (
+                                        <button key={v} onClick={() => updateFile({ format: v })}
+                                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
+                                            (file.format || 'a4') === v
+                                              ? 'option-pill-active'
+                                              : 'option-pill-inactive'}`}>
+                                          {v.toUpperCase()}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {/* Копии */}
+                                <div>
+                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Копий</p>
+                                  <div className="flex items-center gap-2">
+                                    <button onClick={() => updateFile({ fileCopies: Math.max(1, copies - 1) })}
+                                      className="w-6 h-6 rounded-lg bg-white/8 border border-white/15 text-white text-sm font-black cursor-pointer hover:bg-white/18 flex items-center justify-center">−</button>
+                                    <span className="text-sm font-black text-white min-w-[18px] text-center">{copies}</span>
+                                    <button onClick={() => updateFile({ fileCopies: copies + 1 })}
+                                      className="w-6 h-6 rounded-lg bg-white/8 border border-white/15 text-white text-sm font-black cursor-pointer hover:bg-white/18 flex items-center justify-center">+</button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Блок размеров фото */}
+                              {isPhoto && (
+                                <div className="pt-2 border-t border-white/8 space-y-2.5">
+                                  <p className="text-[9px] font-black text-rose-400/90 uppercase tracking-widest">📸 Размер фотографии</p>
+                                  <div className="grid grid-cols-3 gap-1.5">
+                                    {photoSizes.map(s => (
+                                      <button key={s.key} onClick={() => updateFile({ photoSize: s.key })}
+                                        className={`photo-size-pill ${
+                                          (file.photoSize || '10x15') === s.key
+                                            ? 'photo-size-pill-active'
+                                            : 'photo-size-pill-inactive'}`}>
+                                        <div className="text-xs font-black">{s.label}</div>
+                                        <div className="text-[9px] opacity-60 mt-0.5">{s.sub}</div>
+                                        <div className={`text-[10px] font-black mt-1 ${(file.photoSize || '10x15') === s.key ? 'photo-size-price-active' : 'opacity-50'}`}>{s.price} ₽</div>
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {/* Поверхность */}
+                                  <div>
+                                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Поверхность</p>
+                                    <div className="grid grid-cols-2 gap-1.5">
+                                      {([['glossy','✨','Глянцевая','Яркие насыщенные цвета'],['matte','🔲','Матовая','Без отпечатков пальцев']] as const).map(([v,icon,name,desc]) => (
+                                        <button key={v} onClick={() => updateFile({ photoFinish: v })}
+                                          className={`surface-pill ${
+                                            (file.photoFinish || 'glossy') === v
+                                              ? 'surface-pill-active'
+                                              : 'surface-pill-inactive'}`}>
+                                          <div className="text-lg">{icon}</div>
+                                          <div className="text-[11px] font-black mt-1">{name}</div>
+                                          <div className="text-[9px] text-white/38 mt-0.5">{desc}</div>
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Стоимость файла */}
+                            <div className="px-3.5 pb-3 flex justify-between items-center text-[10px] text-white/40">
+                              <span>{isPhoto ? `${selSize.label} × ${selSize.price} ₽ × ${copies} шт.` : `${pages} стр. × ${filePP} ₽ × ${copies} шт.`}</span>
+                              <strong className="text-white text-sm">{fileCost} ₽</strong>
                             </div>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => removeUploadedFile(file.id)}
-                            className="p-1.5 text-slate-400 hover:text-rose-605 transition-colors cursor-pointer"
-                            title="Удалить файл"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -1769,13 +2180,21 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                     {/* Visual details summary list under mockup wrapper */}
                     <div className="grid grid-cols-2 gap-2 text-[10.5px] text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/35 p-3 rounded-2xl border border-slate-150/50 dark:border-slate-850/30">
                       <div>
-                        <strong>Формат:</strong> {paperType === 'standard_a3' || paperType === 'bw_a3' ? 'А3 (Большой)' : 'А4 (Стандарт)'}
+                        <strong>Формат:</strong> {(() => {
+                          const isPhoto = uploadedFiles[0]?.paperType === 'photo';
+                          if (isPhoto) {
+                            const sz = uploadedFiles[0]?.photoSize || '10x15';
+                            const labels: Record<string,string> = { '10x15':'10×15 см', 'polaroid':'Polaroid', '13x18':'13×18 см', '15x21':'15×21 см', '20x30':'20×30 см', '30x40':'30×40 см' };
+                            return labels[sz] || sz;
+                          }
+                          return paperType === 'standard_a3' || paperType === 'bw_a3' ? 'А3 (Большой)' : 'А4 (Стандарт)';
+                        })()}
                       </div>
                       <div>
-                        <strong>Плотность:</strong> {paperDensity === 'thick' ? '160 г/м² (Плотная)' : '80 г/м² (Стандартная)'}
+                        <strong>Плотность:</strong> {uploadedFiles[0]?.paperType === 'photo' ? '230 г/м² (Фото)' : paperDensity === 'thick' ? '160 г/м² (Плотная)' : '80 г/м² (Стандартная)'}
                       </div>
                       <div>
-                        <strong>Покрытие:</strong> {paperType === 'glossy' ? 'Глянцевая' : paperType === 'matte' ? 'Матовая' : paperType === 'kraft' ? 'Крафтовая' : 'Обычное'}
+                        <strong>Покрытие:</strong> {uploadedFiles[0]?.paperType === 'photo' ? 'Фотобумага' : paperType === 'glossy' ? 'Глянцевая' : paperType === 'matte' ? 'Матовая' : paperType === 'kraft' ? 'Крафтовая' : 'Обычное'}
                       </div>
                       <div>
                         <strong>Отделка:</strong> {binding === 'none' ? 'Без скрепления' : binding === 'staple' ? 'Степлер (угол)' : binding === 'file' ? 'Файлик' : binding === 'spring_metal' ? 'Металлическая пружина' : binding === 'spring_plastic' ? 'Пластиковая пружина' : 'Твёрдый переплет'}
@@ -1787,676 +2206,187 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
               {/* Printing Properties Form */}
               <div className="lg:col-span-5 glass-cozy-card p-6 md:p-8 rounded-[32px] space-y-6">
-                <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-3">
-                  <div className="icon-3d-badge p-2 bg-indigo-50 dark:bg-indigo-950/40">
-                    <Sliders className="w-4 h-4 text-indigo-600 icon-3d-svg" />
+                <h3 className="text-lg font-black text-white flex items-center gap-3">
+                  <div className="glass-icon-capsule glass-icon-indigo p-2">
+                    <FileCheck className="w-4 h-4" />
                   </div>
-                  <span>Шаг 2. Настройки печати</span>
+                  <span>Шаг 2. Оформление</span>
                 </h3>
 
                 <form onSubmit={handlePlaceOrder} className="space-y-5">
-                  {/* Quick Preset Short-cuts */}
-                  <div className="space-y-2.5 pb-2 border-b border-slate-100 dark:border-slate-850">
-                    <label className="block text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-pulse" />
-                      <span>Панель быстрых услуг (Пресеты)</span>
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        {
-                          name: '📄 Ч/Б Документ',
-                          desc: 'Ч/Б А4, стандарт 80г',
-                          active: paperType === 'standard' && printColor === 'bw' && paperDensity === 'regular',
-                          config: () => {
-                            setPaperType('standard');
-                            setPrintColor('bw');
-                            setPaperDensity('regular');
-                          }
-                        },
-                        {
-                          name: '🎨 Цветной Лист',
-                          desc: 'Цвет А4, стандарт 80г',
-                          active: paperType === 'standard' && printColor === 'color' && paperDensity === 'regular',
-                          config: () => {
-                            setPaperType('standard');
-                            setPrintColor('color');
-                            setPaperDensity('regular');
-                          }
-                        },
-                        {
-                          name: '📐 Чертеж А3',
-                          desc: 'Большой лист, Ч/Б',
-                          active: paperType === 'standard_a3' && printColor === 'bw',
-                          config: () => {
-                            setPaperType('standard_a3');
-                            setPrintColor('bw');
-                          }
-                        }
-                      ].map((preset, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => {
-                            preset.config();
-                            playPlaceOrderSound();
-                          }}
-                          className={`p-3 rounded-2xl border text-left transition-all duration-250 hover:scale-[1.02] cursor-pointer flex flex-col justify-between ${
-                            preset.active
-                              ? 'border-blue-600 dark:border-blue-500 bg-blue-50/40 dark:bg-blue-950/30 ring-2 ring-blue-500/20'
-                              : 'border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-slate-900/20 hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                          }`}
-                        >
-                          <span className={`${preset.active ? 'text-blue-700 dark:text-blue-400 font-extrabold' : 'text-slate-700 dark:text-slate-300 font-semibold'} text-xs block truncate`}>
-                            {preset.name}
-                          </span>
-                          <span className="text-[9.5px] text-slate-400 dark:text-slate-500 mt-0.5 block truncate">
-                            {preset.desc}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Print Color Option (Печать документов) */}
-                  <div className="space-y-3">
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider flex items-center justify-between">
-                      <span>Выберите цветность (Обычная бумага):</span>
-                      {paperType === 'standard' && (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/50">
-                          <Check className="w-3 h-3" /> Выбрано
-                        </span>
-                      )}
-                    </label>
-                    <div className="grid grid-cols-3 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPrintColor('bw');
-                          setPaperType('standard');
-                        }}
-                        className={`py-3 px-2 rounded-2xl flex flex-col items-center justify-center border font-bold text-xs transition-all cursor-pointer ${
-                          paperType === 'standard' && printColor === 'bw'
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-750 dark:text-indigo-400 font-extrabold ring-2 ring-indigo-500/20 scale-[1.02] shadow-sm'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <span className="text-xs font-black">Ч/Б печать</span>
-                        <span className="text-[10px] font-medium text-slate-450 mt-1">
-                          20 руб / стр
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPrintColor('color');
-                          setPaperType('standard');
-                        }}
-                        className={`py-3 px-2 rounded-2xl flex flex-col items-center justify-center border font-bold text-xs transition-all cursor-pointer ${
-                          paperType === 'standard' && printColor === 'color'
-                            ? 'border-indigo-600 bg-[#e0f2fe]/40 dark:bg-indigo-950/20 text-[#0369a1] dark:text-indigo-400 font-extrabold ring-2 ring-[#0369a1]/20 scale-[1.02] shadow-sm'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <span className="text-xs font-black">Цветная печать</span>
-                        <span className="text-[10px] font-medium text-[#0369a1] dark:text-indigo-300 mt-1">
-                          от 25 руб / стр
-                        </span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPrintColor('color_full');
-                          setPaperType('standard');
-                        }}
-                        className={`py-3 px-2 rounded-2xl flex flex-col items-center justify-center border font-bold text-xs transition-all cursor-pointer ${
-                          paperType === 'standard' && printColor === 'color_full'
-                            ? 'border-indigo-600 bg-[#e0f2fe]/40 dark:bg-indigo-950/20 text-[#0369a1] dark:text-indigo-400 font-extrabold ring-2 ring-[#0369a1]/20 scale-[1.02] shadow-sm'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <span className="text-xs font-black truncate max-w-full">Ц/В картинки</span>
-                        <span className="text-[10px] font-medium text-amber-600 mt-1">
-                          от 65 руб / стр
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Photo Paper Selection Section */}
-                  <div className="space-y-3 pt-1">
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider flex items-center justify-between">
-                      <span>Фотопечать на фотобумаге</span>
-                      {(paperType === 'matte' || paperType === 'glossy') && (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/50">
-                          <Check className="w-3 h-3" /> Выбрано
-                        </span>
-                      )}
-                    </label>
-                    
-                    {/* Choose between Matte and Glossy */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaperType('matte');
-                        }}
-                        className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col justify-center min-h-[64px] ${
-                          paperType === 'matte'
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-bold scale-[1.02] shadow-sm ring-2 ring-indigo-500/10'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <div className="text-xs font-bold leading-tight">Матовая фотобумага</div>
-                        <div className="text-[9px] text-slate-400 mt-1">Без отпечатков пальцев</div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaperType('glossy');
-                        }}
-                        className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col justify-center min-h-[64px] ${
-                          paperType === 'glossy'
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-bold scale-[1.02] shadow-sm ring-2 ring-indigo-500/10'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <div className="text-xs font-bold leading-tight">Глянцевая фотобумага</div>
-                        <div className="text-[9px] text-slate-400 mt-1">Яркие насыщенные цвета</div>
-                      </button>
-                    </div>
-
-                    {/* Sizes Selection (visible and interactive when photo paper is selected) */}
-                    {(paperType === 'glossy' || paperType === 'matte') && (
-                      <div className="p-3 bg-slate-50 dark:bg-slate-950/35 border border-slate-150 dark:border-slate-850 rounded-2xl space-y-2 mt-2 animate-fade-in">
-                        <div className="text-[10px] font-black text-slate-405 dark:text-slate-500 uppercase tracking-widest text-center mb-1">
-                          Выберите размер фотографии:
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {[
-                            { id: '10*15', label: '10*15', price: '20 руб' },
-                            { id: '13*18', label: '13*18', price: '50 руб' },
-                            { id: '15*20', label: '15*20', price: '70 руб' },
-                            { id: '20*30', label: '20*30', price: '100 руб' }
-                          ].map(sizeOpt => (
-                            <button
-                              key={sizeOpt.id}
-                              type="button"
-                              onClick={() => setPhotoSize(sizeOpt.id as any)}
-                              className={`py-2 px-1 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer flex flex-col items-center justify-center ${
-                                photoSize === sizeOpt.id
-                                  ? 'border-indigo-600 bg-indigo-50/55 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-400 font-black'
-                                  : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905 text-slate-600 dark:text-slate-400 hover:border-slate-305'
-                              }`}
-                            >
-                              <span className="text-[11px] font-bold">{sizeOpt.label}</span>
-                              <span className="text-[9px] text-amber-600 dark:text-amber-400 mt-0.5">{sizeOpt.price}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Format A3 Section */}
-                  <div className="space-y-3 pt-1">
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider flex items-center justify-between">
-                      <span>Формат А3</span>
-                      {(paperType === 'standard_a3' || paperType === 'bw_a3') && (
-                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200/50">
-                          <Check className="w-3 h-3" /> Выбрано
-                        </span>
-                      )}
-                    </label>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaperType('standard_a3');
-                        }}
-                        className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col justify-center min-h-[72px] ${
-                          paperType === 'standard_a3'
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-bold scale-[1.02] shadow-sm ring-2 ring-indigo-500/10'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <div className="text-xs font-bold leading-tight">Обычная бумага А3</div>
-                        <div className="text-[9px] text-slate-405 mt-1">Текст / Чертежи</div>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPaperType('bw_a3');
-                        }}
-                        className={`p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col justify-center min-h-[72px] ${
-                          paperType === 'bw_a3'
-                            ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-bold scale-[1.02] shadow-sm ring-2 ring-indigo-500/10'
-                            : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <div className="text-xs font-bold leading-tight">Фотобумага А3</div>
-                        <div className="text-[9px] text-slate-405 mt-1">фотография</div>
-                      </button>
-                    </div>
-
-                    {/* Choice of color/black-and-white for A3 (only visible when A3 options are chosen) */}
-                    {(paperType === 'standard_a3' || paperType === 'bw_a3') && (
-                      <div className="p-3 bg-slate-50 dark:bg-slate-950/35 border border-slate-150 dark:border-slate-850 rounded-2xl space-y-2 mt-2 animate-fade-in">
-                        <div className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-widest text-center mb-1">
-                          Цвет печати А3:
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setPrintColor('bw')}
-                            className={`py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
-                              printColor === 'bw'
-                                ? 'border-indigo-600 bg-indigo-50/55 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-black'
-                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                            }`}
-                          >
-                            Черно-белая (Ч/Б)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setPrintColor('color')}
-                            className={`py-2 px-3 rounded-xl border text-center font-bold text-xs transition-all cursor-pointer ${
-                              printColor === 'color' || printColor === 'color_full'
-                                ? 'border-indigo-600 bg-indigo-50/55 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-black'
-                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-905 text-slate-600 dark:text-slate-400 hover:border-slate-300'
-                            }`}
-                          >
-                            Цветная (Ц/В)
-                          </button>
-                        </div>
-                        <div className="text-[9px] text-center text-slate-500 font-bold pt-1">
-                          Текущий тариф для А3: {paperType === 'standard_a3' ? (printColor === 'bw' ? '100 ₽ / стр' : '150 ₽ / стр') : (printColor === 'bw' ? '200 ₽ / стр' : '250 ₽ / стр')}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Copies count counter */}
+                  {/* Промокод */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                      Количество полных копий
-                    </label>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCopies(prev => Math.max(1, prev - 1))}
-                        className="w-11 h-11 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold flex items-center justify-center text-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={copies}
-                        onChange={e => setCopies(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-20 h-11 border border-slate-200 dark:border-slate-800 rounded-xl text-center font-bold bg-white dark:bg-slate-950 focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCopies(prev => prev + 1)}
-                        className="w-11 h-11 bg-slate-100 dark:bg-slate-800 rounded-xl font-bold flex items-center justify-center text-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Finishing (Binding) Options */}
-                  <div className="space-y-3 pt-1">
-                    <label className="block text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider flex items-center justify-between">
-                      <span>Финишная отделка (Скрепление)</span>
-                      {binding !== 'none' && (
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/30 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-indigo-200/50">
-                          <Check className="w-3 h-3" /> Выбрано
-                        </span>
-                      )}
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 border-b border-slate-100 dark:border-slate-850 pb-4">
-                      {(() => {
-                        const totalUploadedPages = uploadedFiles.reduce((acc, f) => acc + (f.pageCount || 1), 0);
-                        const metalSpringPriceText = totalUploadedPages > 0 
-                          ? `+${totalUploadedPages <= 100 ? 250 : 350} ₽` 
-                          : '+250 / 350 ₽';
-                        
-                        return [
-                          { id: 'none', label: 'Нет', desc: 'Просто листы', price: '0 ₽' },
-                          { id: 'staple', label: 'Сшивка', desc: 'Скрепка в углу', price: '+15 ₽' },
-                          { id: 'file', label: 'Файлик', desc: 'Прозрачный файл 5 ₽', price: '+5 ₽' },
-                          { id: 'spring_metal', label: 'Металл. пружина', desc: 'До 100 листов 250₽ / выше 350₽', price: metalSpringPriceText },
-                        ].map(opt => (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            onClick={() => {
-                              setBinding(opt.id as any);
-                              playPlaceOrderSound();
-                            }}
-                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between min-h-[64px] ${
-                              binding === opt.id
-                                ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/30 text-indigo-750 dark:text-indigo-400 font-bold scale-[1.02] ring-2 ring-indigo-500/10 shadow-sm'
-                                : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-400 hover:border-slate-300 opacity-80 hover:opacity-100'
-                            }`}
-                          >
-                            <div className="text-[11px] font-bold leading-none">{opt.label}</div>
-                            <div className="text-[8.5px] text-slate-400 mt-1 truncate leading-tight">{opt.desc}</div>
-                            <div className="text-[9.5px] font-extrabold text-amber-600 dark:text-amber-400 mt-1 leading-none">{opt.price}</div>
-                          </button>
-                        ));
-                      })()}
-                    </div>
-                  </div>
-
-                  {/* Promo Code Input section */}
-                  <div className="space-y-2 border-b border-slate-100 dark:border-slate-850 pb-4">
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
-                      Промокод на скидку
+                    <label className="block text-[10px] font-black text-white/50 uppercase tracking-widest mb-2">
+                      Промокод
                     </label>
                     <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={promoCode}
-                          onChange={e => setPromoCode(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleApplyPromo();
-                            }
-                          }}
-                          placeholder="Например: WELCOME5, STUDENT15, PROMO10..."
-                          disabled={!!appliedPromo}
-                          className={`block w-full p-2.5 pr-20 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs font-bold uppercase transition-all ${
-                            appliedPromo ? 'bg-emerald-50/30 dark:bg-emerald-950/20 border-emerald-500 text-emerald-600 dark:text-emerald-400' : ''
-                          }`}
-                        />
-                        {appliedPromo && (
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-black text-emerald-600 bg-emerald-100/50 px-2 py-0.5 rounded-md">
-                            АКТИВЕН
-                          </span>
-                        )}
-                      </div>
-                      
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                        placeholder="Введите промокод..."
+                        className="flex-1 px-3.5 py-2.5 rounded-xl bg-white/8 border border-white/15 text-white text-xs placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30"
+                      />
                       {!appliedPromo ? (
-                        <button
-                          type="button"
-                          onClick={handleApplyPromo}
-                          className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl cursor-pointer shadow-md shadow-indigo-600/10"
-                        >
+                        <button type="button" onClick={handleApplyPromo}
+                          className="px-4 py-2.5 bg-indigo-500/30 hover:bg-indigo-500/50 border border-indigo-400/40 text-indigo-200 font-black text-xs rounded-xl cursor-pointer transition-all">
                           Применить
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={handleRemovePromo}
-                          className="px-4 py-2.5 bg-rose-500 hover:bg-rose-600 text-white font-heavy text-xs rounded-xl cursor-pointer shadow-md"
-                        >
+                        <button type="button" onClick={handleRemovePromo}
+                          className="px-4 py-2.5 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-400/40 text-rose-300 font-black text-xs rounded-xl cursor-pointer transition-all">
                           Сбросить
                         </button>
                       )}
                     </div>
-                    {promoError && (
-                      <p className="text-[10px] text-rose-500 font-bold dark:text-rose-400 animate-pulse">{promoError}</p>
-                    )}
-                    {appliedPromo && (
-                      <p className="text-[10px] text-emerald-600 font-bold dark:text-emerald-400">
-                        Скидка успешно применена при расчете к сумме заказа!
-                      </p>
-                    )}
+                    {promoError && <p className="text-[10px] text-rose-400 font-bold mt-1.5 animate-pulse">{promoError}</p>}
+                    {appliedPromo && <p className="text-[10px] text-emerald-400 font-bold mt-1.5">✓ Скидка применена!</p>}
                   </div>
 
-                  {/* Operator Notes/Priorities */}
+                  {/* Заметки */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                      Заметки оператору печати (опционально)
+                    <label className="block text-[10px] font-black text-white/50 uppercase tracking-widest mb-2">
+                      Заметки печатнику
                     </label>
                     <textarea
                       value={notes}
                       onChange={e => setNotes(e.target.value)}
-                      placeholder="Например: Двухсторонняя печать, скрепка в углу, первая страница обложка..."
+                      placeholder="Например: двухсторонняя, скрепка в углу, первая страница — обложка..."
                       rows={3}
-                      className="block w-full p-3.5 border border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-950 focus:ring-2 focus:ring-indigo-500 focus:outline-none text-xs"
+                      className="block w-full p-3.5 rounded-xl bg-white/8 border border-white/15 text-white text-xs placeholder:text-white/30 focus:outline-none focus:ring-2 focus:ring-white/30 resize-none"
                     />
                   </div>
 
-                  {/* Real-time calculated Cost Breakdown (Retro thermal receipt ticket style) */}
+                  {/* Чек */}
                   {uploadedFiles.length > 0 && (
-                    <div className="relative overflow-hidden bg-[#faf9f5] dark:bg-slate-950/40 border border-slate-250 dark:border-slate-800 rounded-3xl p-5 space-y-4 shadow-md transition-all duration-300">
-                      {/* Left-right ticket punch-hole notches */}
-                      <div className="absolute -left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 bg-white dark:bg-slate-900 rounded-full border border-slate-250 dark:border-slate-800 z-10"></div>
-                      <div className="absolute -right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 bg-white dark:bg-slate-900 rounded-full border border-slate-250 dark:border-slate-800 z-10"></div>
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
+                      <p className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center">* РАСЧЁТ СТОИМОСТИ *</p>
 
-                      <div className="text-center font-mono text-[9px] uppercase tracking-widest text-slate-400 dark:text-slate-500 font-bold">
-                        * РАСЧЕТ СТОИМОСТИ ЗАКАЗА *
-                      </div>
-
-                      <div className="space-y-1.5 font-mono text-xs">
-                        <div className="flex justify-between items-center text-slate-650 dark:text-slate-400">
-                          <span>Загружено файлов:</span>
-                          <span className="font-bold text-slate-800 dark:text-white">{uploadedFiles.length} шт.</span>
-                        </div>
-                        
-                        <div className="flex justify-between items-center text-slate-650 dark:text-slate-400">
-                          <span>Всего страниц:</span>
-                          <span className="font-bold text-slate-800 dark:text-white">
-                            {uploadedFiles.reduce((acc, f) => acc + (f.pageCount || 1), 0)} стр.
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-slate-650 dark:text-slate-400">
-                          <span>Тираж (копии):</span>
-                          <span className="font-bold text-slate-800 dark:text-white">x {copies}</span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-slate-650 dark:text-slate-400">
-                          <span>Тип бумаги:</span>
-                          <span className="font-bold text-slate-800 dark:text-white truncate max-w-[160px]">
-                            {paperType === 'standard' ? 'А4 Стандарт' : paperType === 'standard_a3' ? 'А3 Стандарт' : paperType === 'bw_a3' ? 'А3 Фотобумага' : paperType === 'matte' ? 'А4 Матовая' : 'А4 Глянцевая'}
-                          </span>
-                        </div>
-
-                        <div className="flex justify-between items-center text-slate-650 dark:text-slate-400">
-                          <span>Цветность:</span>
-                          <span className="font-bold text-slate-800 dark:text-white">
-                            {printColor === 'bw' ? 'Ч/Б (Монохром)' : printColor === 'color_full' ? 'Цвет (100% залит.)' : 'Цвет (RGB)'}
-                          </span>
-                        </div>
-
-                        {paperDensity === 'thick' && paperType === 'standard' && (
-                          <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-450 font-bold text-[11px]">
-                            <span>Плотная бумага (160г/м²):</span>
-                            <span>+10 ₽ / стр</span>
-                          </div>
-                        )}
-
-                        {binding === 'none' ? (
-                          <div className="flex justify-between items-center text-slate-500 dark:text-slate-500 text-[11px]">
-                            <span>Скрепление / Отделка:</span>
-                            <span className="font-medium">Нет (по прайсу)</span>
-                          </div>
-                        ) : (
-                          (() => {
-                            const totalPages = uploadedFiles.reduce((acc, f) => acc + (f.pageCount || 1), 0);
-                            let bindingFee = 0;
-                            let label = '';
-                            if (binding === 'staple') {
-                              bindingFee = 15;
-                              label = 'Скрепка';
-                            } else if (binding === 'file') {
-                              bindingFee = 5;
-                              label = 'Файлик';
-                            } else if (binding === 'spring_metal') {
-                              bindingFee = totalPages <= 100 ? 250 : 350;
-                              label = 'Металл. пружина';
-                            } else if (binding === 'spring_plastic') {
-                              bindingFee = 100;
-                              label = 'Пластик. пружина';
-                            } else {
-                              bindingFee = 450;
-                              label = 'Тв. переплет';
-                            }
-                            return (
-                              <div className="flex justify-between items-center text-indigo-600 dark:text-indigo-400 font-bold text-[11px]">
-                                <span>Комплектация ({label}):</span>
-                                <span>+{bindingFee} ₽</span>
-                              </div>
-                            );
-                          })()
-                        )}
-
-                        {(() => {
-                          const activePromo = getActivePromo();
-                          if (!activePromo) return null;
-                          const originalCost = calculateOrderCost(
-                            uploadedFiles.length,
-                            copies,
-                            paperType,
-                            printColor,
-                            (paperType === 'glossy' || paperType === 'matte') ? photoSize : paperDensity,
-                            uploadedFiles,
-                            (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-                            binding
-                          );
-                          const discountedCost = calculateOrderCost(
-                            uploadedFiles.length,
-                            copies,
-                            paperType,
-                            printColor,
-                            (paperType === 'glossy' || paperType === 'matte') ? photoSize : paperDensity,
-                            uploadedFiles,
-                            (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-                            binding,
-                            activePromo || undefined,
-                            activePromo ? getActiveDiscountPercent(activePromo) : undefined
-                          );
-                          const savings = originalCost - discountedCost;
-                          const discountPctText = activePromo === 'PROMO10' ? '-10%' : 
-                                                 activePromo === 'STUDENT15' ? '-15%' : 
-                                                 activePromo === 'FIRSTFREE' ? '-20%' :
-                                                 activePromo === 'COPYMAX' ? '-50%' :
-                                                 (user.promoCode && activePromo === user.promoCode.trim().toUpperCase()) ? `-${user.promoDiscount}%` : 
-                                                 `-${getActiveDiscountPercent(activePromo)}%`;
+                      <div className="space-y-2 text-xs">
+                        {/* Список файлов с ценами */}
+                        {uploadedFiles.map((f, idx) => {
+                          const isPhotoFile = f.paperType === 'photo';
+                          const photoSizes = [
+                            { key: '10x15', label: '10×15', price: 20 },
+                            { key: 'polaroid', label: 'Полароид', price: 30 },
+                            { key: '13x18', label: '13×18', price: 50 },
+                            { key: '15x21', label: '15×21', price: 70 },
+                            { key: '20x30', label: '20×30', price: 100 },
+                            { key: '30x40', label: '30×40', price: 250 },
+                          ] as const;
+                          const selSize = photoSizes.find(s => s.key === (f.photoSize || '10x15')) || photoSizes[0];
+                          const fileCopies = f.fileCopies || 1;
+                          const pages = f.pageCount || 1;
+                          const fillPct = f.colorFillPercent ?? 50;
+                          const isA3 = f.format === 'a3';
+                          const pp = isPhotoFile ? selSize.price
+                            : ((f.printColor || 'bw') === 'bw'
+                              ? (isA3 ? 100 : 20)
+                              : (isA3 ? 150 : (fillPct <= 20 ? 25 : fillPct <= 60 ? 40 : 65)));
+                          const fileCost = pp * (isPhotoFile ? 1 : pages) * fileCopies;
                           return (
-                            <>
-                              <div className="flex justify-between items-center text-rose-600 dark:text-rose-450 font-bold text-[11px]">
-                                <span>Промокод ({activePromo}):</span>
-                                <span>{discountPctText}</span>
-                              </div>
-                              {savings > 0 && (
-                                <div className="flex justify-between items-center text-rose-650 dark:text-rose-400 font-extrabold text-[11px]">
-                                  <span>Размер скидки:</span>
-                                  <span className="font-mono">-₽{savings}</span>
-                                </div>
-                              )}
-                            </>
+                            <div key={f.id} className="flex justify-between items-start gap-2 text-white/70">
+                              <span className="truncate max-w-[160px] text-white/60">{idx+1}. {f.name}</span>
+                              <span className="font-black text-white shrink-0">{fileCost} ₽</span>
+                            </div>
                           );
-                        })()}
-                      </div>
+                        })}
 
-                      {/* Interactive serrated tear line */}
-                      <div className="relative h-4 my-2">
-                        <div className="absolute inset-x-0 top-1/2 h-[1px] border-t border-dashed border-slate-300 dark:border-slate-800 -translate-y-1/2"></div>
-                        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#faf9f5] dark:bg-slate-950 px-2 text-slate-400 dark:text-slate-500 text-[9px] font-mono font-bold flex items-center gap-1 select-none">
-                          <span>✂️</span> <span className="tracking-widest uppercase text-[8px] opacity-80">ЛИНИЯ ОТРЫВА ЧЕКА</span>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-end font-mono">
-                        <div>
-                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-550 block">ИТОГ К ОПЛАТЕ:</span>
-                          <span className="text-[8px] text-indigo-650 dark:text-indigo-400 font-semibold uppercase block leading-tight mt-0.5">
-                            {(() => {
-                              const activePromo = getActivePromo();
-                              if (activePromo) {
-                                const originalCost = calculateOrderCost(
-                                  uploadedFiles.length,
-                                  copies,
-                                  paperType,
-                                  printColor,
-                                  (paperType === 'glossy' || paperType === 'matte') ? photoSize : paperDensity,
-                                  uploadedFiles,
-                                  (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-                                  binding
-                                );
-                                const discountedCost = calculateOrderCost(
-                                  uploadedFiles.length,
-                                  copies,
-                                  paperType,
-                                  printColor,
-                                  (paperType === 'glossy' || paperType === 'matte') ? photoSize : paperDensity,
-                                  uploadedFiles,
-                                  (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-                                  binding,
-                                  activePromo || undefined,
-                                  activePromo ? getActiveDiscountPercent(activePromo) : undefined
-                                );
-                                const savings = originalCost - discountedCost;
-                                return savings > 0 
-                                  ? `Промокод применен (Сэкономлено ₽${savings})`
-                                  : 'Промокод применен';
-                              }
-                              return 'Скидок не применено';
-                            })()}
-                          </span>
-                        </div>
-                        <span className="text-xl font-black text-slate-900 dark:text-indigo-400 leading-none">
-                          ₽{(() => {
+                        <div className="border-t border-white/10 pt-2 mt-1">
+                          {/* Итог */}
+                          {(() => {
                             const activePromo = getActivePromo();
-                            return calculateOrderCost(
-                              uploadedFiles.length,
-                              copies,
-                              paperType,
-                              printColor,
-                              (paperType === 'glossy' || paperType === 'matte') ? photoSize : paperDensity,
-                              uploadedFiles,
-                              (paperType === 'glossy' || paperType === 'matte') ? photoSize : undefined,
-                              binding,
-                              activePromo || undefined,
-                              activePromo ? getActiveDiscountPercent(activePromo) : undefined
+                            const subtotal = uploadedFiles.reduce((acc, f) => {
+                              const isPhotoFile = f.paperType === 'photo';
+                              const photoSizes = [
+                                { key: '10x15', price: 20 }, { key: 'polaroid', price: 30 },
+                                { key: '13x18', price: 50 }, { key: '15x21', price: 70 },
+                                { key: '20x30', price: 100 }, { key: '30x40', price: 250 },
+                              ] as const;
+                              const selSize = (photoSizes as readonly {key: string; price: number}[]).find(s => s.key === (f.photoSize || '10x15')) || photoSizes[0];
+                              const fileCopies = f.fileCopies || 1;
+                              const pages = f.pageCount || 1;
+                              const fillPct = f.colorFillPercent ?? 50;
+                              const isA3 = f.format === 'a3';
+                              const pp = isPhotoFile ? selSize.price
+                                : ((f.printColor || 'bw') === 'bw'
+                                  ? (isA3 ? 100 : 20)
+                                  : (isA3 ? 150 : (fillPct <= 20 ? 25 : fillPct <= 60 ? 40 : 65)));
+                              return acc + pp * (isPhotoFile ? 1 : pages) * fileCopies;
+                            }, 0);
+                            const discount = activePromo ? getActiveDiscountPercent(activePromo) : 0;
+                            const total = Math.round(subtotal * (1 - discount / 100));
+                            const savings = subtotal - total;
+                            return (
+                              <>
+                                {savings > 0 && (
+                                  <div className="flex justify-between text-rose-400 font-bold text-[11px]">
+                                    <span>Промокод ({activePromo}):</span>
+                                    <span>−{savings} ₽</span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between items-center mt-1">
+                                  <span className="text-[10px] font-black text-white/50 uppercase tracking-wider">Итого:</span>
+                                  <span className="text-2xl font-black text-white">₽{total}</span>
+                                </div>
+                              </>
                             );
                           })()}
-                        </span>
+                        </div>
                       </div>
 
-                      {/* Real Barcode representation */}
-                      <div className="pt-2 flex flex-col items-center justify-center space-y-1">
-                        <div className="flex items-center justify-center gap-[1.5px] h-5 opacity-60 dark:opacity-30">
-                          {[1,3,1,2,4,1,2,3,1,4,2,1,3,1,2,4,1,3,2,1,4,1,3,1].map((weight, i) => (
-                            <div 
-                              key={i} 
-                              className="bg-slate-800 dark:bg-white h-full" 
-                              style={{ width: `${weight * 0.75}px` }} 
-                            />
+                      {/* Штрихкод */}
+                      <div className="flex flex-col items-center gap-1 pt-1">
+                        <div className="flex items-center gap-[1.5px] h-4 opacity-30">
+                          {[1,3,1,2,4,1,2,3,1,4,2,1,3,1,2,4,1,3,2,1,4,1,3,1].map((w,i) => (
+                            <div key={i} className="bg-white h-full" style={{width:`${w*0.75}px`}}/>
                           ))}
                         </div>
-                        <span className="text-[8px] font-mono tracking-widest text-slate-400 dark:text-slate-550">
-                          * ORD-{1000 + database.orders.length + 1} *
-                        </span>
+                        <span className="text-[8px] font-mono tracking-widest text-white/25">* ORD-{1000 + database.orders.length + 1} *</span>
                       </div>
                     </div>
                   )}
 
-                  {/* Create Order Submit */}
+                  {/* Кнопка заказа */}
+                  {/* Показываем выбранную услугу если есть */}
+                  {selectedService && (
+                    <div className="flex items-center justify-between p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🛍</span>
+                        <div>
+                          <p className="text-[10px] text-indigo-300 font-black uppercase tracking-widest">Услуга</p>
+                          <p className="text-white font-bold text-xs">{selectedService.title}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 font-black text-sm">+{selectedService.price} ₽</span>
+                        <button onClick={() => { setSelectedService(null); setNotes(''); }} className="text-white/30 hover:text-white/60 text-xs cursor-pointer">✕</button>
+                      </div>
+                    </div>
+                  )}
+
                   <button
                     type="submit"
-                    disabled={uploadedFiles.length === 0 || !isWorkingHours()}
-                    className={`w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl font-black text-sm text-white transition-all shadow-lg ${
-                      uploadedFiles.length > 0 && isWorkingHours()
-                        ? 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/10 cursor-pointer'
-                        : 'bg-slate-300 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
+                    disabled={uploadedFiles.length === 0 || !isWorkingHours() || uploadedFiles.some(f => !f.url)}
+                    className={`w-full flex items-center justify-center gap-2 py-4 px-4 rounded-2xl font-black text-sm text-white transition-all ${
+                      uploadedFiles.length > 0 && isWorkingHours() && !uploadedFiles.some(f => !f.url)
+                        ? 'bg-indigo-600 hover:bg-indigo-700 cursor-pointer'
+                        : 'bg-white/10 text-white/30 cursor-not-allowed'
                     }`}
                   >
                     <FileCheck className="w-5 h-5" />
-                    {!isWorkingHours() ? 'Оформление временно недоступно (Закрыто)' : 'Оформить заказ'}
+                    {!isWorkingHours()
+                      ? 'Оформление временно недоступно'
+                      : uploadedFiles.some(f => !f.url)
+                        ? 'Загрузка файлов...'
+                        : 'Оформить заказ'}
                   </button>
+                  {uploadedFiles.length === 0 && (
+                    <p className="text-center text-[11px] text-white/30 mt-2">
+                      ↑ Сначала загрузите файл на шаге 1
+                    </p>
+                  )}
                 </form>
               </div>
 
@@ -2471,11 +2401,11 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="space-y-6 w-full"
+                className="space-y-6 w-full md:overflow-y-auto md:flex-1 min-h-0 pr-1"
               >
               
               {/* Filter controls and top line */}
-              <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-150 dark:border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="glass-panel p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-center gap-3">
                 <div className="flex flex-wrap gap-1 w-full sm:w-auto">
                   {[
                     { id: 'all', label: 'Все заказы' },
@@ -2499,9 +2429,23 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
               </div>
 
+              {/* Rating widgets for completed orders */}
+              {userOrders
+                .filter(o => o.status === 'printed' && !o.rating && !dismissedRatings.has(o.id))
+                .slice(0, 2)
+                .map(o => (
+                  <RatingWidget
+                    key={o.id}
+                    order={o}
+                    onRate={handleRate}
+                    onDismiss={handleDismissRating}
+                  />
+                ))
+              }
+
               {/* Order Lists Rendering */}
               {userOrders.length === 0 ? (
-                <div className="text-center bg-white dark:bg-slate-900 rounded-3xl p-12 border border-slate-150 dark:border-slate-800 max-w-lg mx-auto">
+                <div className="text-center glass-panel rounded-3xl p-12 max-w-lg mx-auto">
                   <div className="bg-slate-100 dark:bg-slate-950 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                     <FileCheck className="w-8 h-8" />
                   </div>
@@ -2527,7 +2471,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                     .map(ord => (
                       <div
                         key={ord.id}
-                        className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-150 dark:border-slate-800 shadow-sm overflow-hidden"
+                        className="glass-panel rounded-3xl overflow-hidden"
                       >
                         {/* Upper Section */}
                         <div className="p-5 border-b border-slate-150 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 flex flex-col sm:flex-row justify-between gap-4">
@@ -2606,8 +2550,23 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                           </div>
 
                           {ord.notes && (
-                            <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-2xl text-[11px] border border-slate-100 dark:border-slate-800">
-                              <span className="font-bold text-slate-500 dark:text-slate-400">Требования к распечатке:</span> {ord.notes}
+                            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
+                              {ord.notes.startsWith('Услуга:') ? (
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-lg">🛍</span>
+                                    <div>
+                                      <p className="text-[10px] text-indigo-300 font-black uppercase tracking-widest">Услуга</p>
+                                      <p className="text-white font-bold text-xs">{ord.notes.replace('Услуга: ', '').split(' — ')[0]}</p>
+                                    </div>
+                                  </div>
+                                  <span className="text-emerald-400 font-black text-sm">{ord.notes.split(' — ')[1]}</span>
+                                </div>
+                              ) : (
+                                <div className="text-[11px]">
+                                  <span className="font-bold text-slate-500 dark:text-slate-400">Требования к распечатке:</span> {ord.notes}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -2629,20 +2588,53 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                               Накладная
                             </button>
 
-                            {/* Payment Integration Trigger */}
-                            {ord.paymentStatus !== 'paid' ? (
+                            {/* ЮKassa Pay Button — показываем только если заказ не оплачен */}
+                            {ord.paymentStatus === 'unpaid' && (
                               <button
-                                onClick={() => setPayingOrder(ord)}
-                                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-lg shadow-emerald-600/10 transition"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch('https://sever-18.ru/api/payment-create.php', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        orderId: ord.id,
+                                        amount: ord.totalCost,
+                                        email: user.email,
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    if (data.paymentUrl) {
+                                      window.location.href = data.paymentUrl;
+                                    } else {
+                                      alert('Ошибка создания платежа. Попробуйте ещё раз.');
+                                    }
+                                  } catch {
+                                    alert('Ошибка соединения. Проверьте интернет и попробуйте снова.');
+                                  }
+                                }}
+                                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/20 transition"
                               >
                                 <CreditCard className="w-3.5 h-3.5" />
-                                Оплатить через Банк / СБП
+                                Оплатить онлайн
                               </button>
-                            ) : (
-                              <span className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/20 dark:text-emerald-400 border border-emerald-500/20 px-4.5 py-2.5 rounded-xl text-xs font-bold">
-                                <CheckCircle className="w-4 h-4" /> Оплачено ({ord.paymentMethod})
-                              </span>
                             )}
+
+                            {/* Если уже оплачено — показываем зелёный статус вместо кнопки */}
+                            {ord.paymentStatus === 'paid' && (
+                              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-black px-3 py-2.5">
+                                <CheckCircle className="w-4 h-4" />
+                                Оплачено
+                              </div>
+                            )}
+
+                            {/* Status/Receipt Trigger */}
+                            <button
+                              onClick={() => setPayingOrder(ord)}
+                              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black px-4.5 py-2.5 rounded-xl shadow-lg shadow-indigo-600/10 transition justify-center"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              Статус обработки
+                            </button>
                           </div>
                         </div>
 
@@ -2662,7 +2654,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-150 dark:border-slate-800 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all duration-300 w-full"
+                className="glass-panel rounded-3xl flex flex-col h-[550px] md:h-full md:flex-1 min-h-0 md:min-h-0 overflow-hidden transition-all duration-300 w-full"
               >
               
               {/* Operator info header */}
@@ -2670,20 +2662,29 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 <div className="flex items-center gap-3">
                   <div className="relative">
                     <img
-                      src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                      alt="Operator"
+                      src="/logo-192.png"
+                      alt="Фото-Север"
                       className="w-10 h-10 rounded-xl object-cover shrink-0 ring-2 ring-emerald-500/30"
-                      referrerPolicy="no-referrer"
                     />
-                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-900" />
+                    {(() => {
+                      const adminUser = database.users.find(u => u.role === 'admin');
+                      const isAdminOnline = adminUser?.isOnline === true;
+                      return (
+                        <span className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${isAdminOnline ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                      );
+                    })()}
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-slate-800 dark:text-white">Дмитрий (Главный Печатник)</h4>
-                    {isWorkingHours() ? (
-                      <span className="text-[10px] text-emerald-600 font-bold dark:text-emerald-400 uppercase tracking-widest block mt-0.5 animate-pulse">● Копи-Центр Открыт (Печать Онлайн)</span>
-                    ) : (
-                      <span className="text-[10px] text-rose-500 font-bold dark:text-rose-400 uppercase tracking-widest block mt-0.5">● Копи-Центр Закрыт (Вне Рабочее Время)</span>
-                    )}
+                    <h4 className="text-xs font-black text-slate-800 dark:text-white">Оператор</h4>
+                    {(() => {
+                      const adminUser = database.users.find(u => u.role === 'admin');
+                      const isAdminOnline = adminUser?.isOnline === true;
+                      return isAdminOnline ? (
+                        <span className="text-[10px] text-emerald-600 font-bold dark:text-emerald-400 uppercase tracking-widest block mt-0.5 animate-pulse">● В сети — отвечает быстро</span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest block mt-0.5">● Не в сети — ответит позже</span>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -2704,7 +2705,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               </div>
 
               {/* Chat Messages Log */}
-              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/30 dark:bg-slate-950/10">
+              <div className="flex-1 p-4 overflow-y-auto space-y-4 bg-slate-50/30 dark:bg-slate-950/10 chat-message-log">
                 {userChats.length === 0 ? (
                   <div className="h-full flex flex-col justify-center items-center text-center p-8">
                     <div className="bg-slate-100 dark:bg-slate-900 w-14 h-14 rounded-full flex items-center justify-center text-slate-400 mb-3">
@@ -2735,8 +2736,28 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                           />
                         )}
                         <div className="space-y-1">
-                          <span className="text-[9px] font-bold text-slate-400 block px-1">
-                            {msg.senderName} &bull; {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                          <span className="text-[9px] font-bold text-slate-400 flex items-center gap-1 px-1">
+                            <span>{msg.senderName} &bull; {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+                            {!isAdmin && (
+                              <span className="inline-flex items-center ml-0.5" title={msg.readByAdmin ? "Прочитано" : "Доставлено"}>
+                                {msg.readByAdmin ? (
+                                  <span className="text-sky-450 dark:text-sky-400 flex items-center relative w-4.5 h-3">
+                                    <svg className="w-3 h-3 absolute left-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    <svg className="w-3 h-3 absolute left-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 dark:text-slate-500 flex items-center w-3 h-3">
+                                    <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  </span>
+                                )}
+                              </span>
+                            )}
                           </span>
                           <div
                             className={`p-3.5 rounded-2xl text-xs leading-relaxed font-medium shadow-sm border ${
@@ -2767,12 +2788,12 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               </div>
 
               {/* Chat inputs panel */}
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-150 dark:border-slate-800 bg-white dark:bg-slate-900 flex gap-2">
+              <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 glass-panel flex gap-2">
                 <input
                   type="text"
                   value={chatInput}
                   onChange={e => setChatInput(e.target.value)}
-                  placeholder="Задайте ваш вопрос Дмитрий..."
+                  placeholder="Задайте ваш вопрос оператору..."
                   className="flex-1 bg-slate-50 dark:bg-slate-950 text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-850 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 <button
@@ -2794,13 +2815,13 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="space-y-6 w-full"
+                className="space-y-6 w-full md:overflow-y-auto md:flex-1 min-h-0 pr-1"
               >
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 {/* User Stats Card */}
-                <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-150 dark:border-slate-800 shadow-sm space-y-6">
+                <div className="glass-panel p-6 md:p-8 rounded-3xl space-y-6">
                   {isEditingProfile ? (
                     <form onSubmit={handleSaveProfile} className="space-y-4">
                       <div className="text-center space-y-4">
@@ -3130,7 +3151,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 </div>
 
                 {/* Secure System & Synchronization Details */}
-                <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-150 dark:border-slate-800 shadow-sm space-y-6">
+                <div className="glass-panel p-6 md:p-8 rounded-3xl space-y-6">
                   <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Безопасность и Настройки</h3>
                   
                   <div className="space-y-4">
@@ -3179,8 +3200,78 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   </div>
                 </div>
 
+                {/* 📋 Telegram Notifications Panel */}
+                <div className="glass-panel p-6 md:p-8 rounded-3xl space-y-5">
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4.5 h-4.5 text-sky-500" />
+                    <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Telegram-уведомления</h3>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
+                    Получайте моментальные сообщения от нашего бота-ассистента в Telegram, когда меняется статус вашего заказа (Принят, В печати, Готов к выдаче) или поступают важные сообщения от оператора в чате.
+                  </p>
+
+                  <div className="space-y-4 pt-1">
+                    {/* Status Toggle option */}
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10">
+                      <div>
+                        <span className="text-xs font-black text-white block">Включить уведомления</span>
+                        <span className="text-[9px] text-white/40 mt-0.5 block">Уведомления о заказах</span>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          defaultChecked={!!user.telegramNotificationsEnabled}
+                          onChange={(e) => {
+                            const updatedUsers = database.users.map(u =>
+                              u.id === user.id ? { ...u, telegramNotificationsEnabled: e.target.checked } : u
+                            );
+                            onUpdateDatabase({ users: updatedUsers });
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500" />
+                      </label>
+                    </div>
+
+                    {/* Кнопка подключения Telegram */}
+                    <div className="space-y-3">
+                      {telegramLinked || user.telegramChatId ? (
+                        <div className="flex items-center gap-3 p-3.5 bg-emerald-500/10 border border-emerald-500/25 rounded-2xl">
+                          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                          <div>
+                            <p className="text-xs font-black text-emerald-400">Telegram подключён</p>
+                            <p className="text-[10px] text-white/50 mt-0.5">Вы будете получать уведомления в Telegram</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <p className="text-[10px] text-white/50 leading-relaxed">
+                            Нажмите кнопку — откроется бот в Telegram. Там просто нажмите <b className="text-white/80">«Отправить»</b> и всё готово.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={handleConnectTelegram}
+                            disabled={telegramLinking}
+                            className="w-full py-3 px-4 bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white font-black text-sm rounded-2xl transition flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            {telegramLinking ? (
+                              <><RefreshCw className="w-4 h-4 animate-spin" /> Открываем бота...</>
+                            ) : (
+                              <>
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.6 1.5-1.55 2.75-2.91 3.75-3.95.44-.45.89-.96.44-.96-.45 0-1.18.3-2.18.97-1 .68-1.86 1.25-3.5 2.33-.53.35-.95.53-1.34.52-.42 0-1.22-.23-1.82-.42-.74-.24-1.33-.36-1.28-.77.03-.21.32-.43.88-.67 3.44-1.5 5.74-2.49 6.89-2.98 3.29-1.37 3.98-1.61 4.43-1.62.1 0 .32.02.46.14.12.1.15.24.17.34.02.13.02.43 0 .52z"/></svg>
+                                Подключить Telegram
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Theme Customizer Card */}
-                <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-150 dark:border-slate-800 shadow-sm space-y-5 flex flex-col justify-between">
+                <div className="glass-panel p-6 md:p-8 rounded-3xl space-y-5 flex flex-col justify-between">
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <Sparkles className="w-4.5 h-4.5 text-indigo-650" />
@@ -3273,7 +3364,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                 </div>
 
                 {/* Social Share Referral Widget Card */}
-                <div className="bg-white dark:bg-slate-900 p-6 md:p-8 rounded-3xl border border-slate-150 dark:border-slate-800 shadow-sm space-y-5">
+                <div className="glass-panel p-6 md:p-8 rounded-3xl space-y-5">
                   <div className="flex items-center gap-2">
                     <Share2 className="w-4.5 h-4.5 text-indigo-650" />
                     <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Поделиться Сервисом</h3>
@@ -3367,7 +3458,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
               </div>
 
               {/* In App Notifications Journal */}
-              <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 border border-slate-150 dark:border-slate-800">
+              <div className="glass-panel rounded-3xl p-6 md:p-8">
                 <div className="flex justify-between items-center mb-5 pb-3 border-b border-slate-150 dark:border-slate-800">
                   <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <Bell className="w-4.5 h-4.5 text-indigo-650" /> Журнал уведомлений
@@ -3887,282 +3978,67 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       )}
       {payingOrder && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden text-left transform transition-all">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden text-left transform transition-all relative">
             
-            {/* Header with SSL Badge */}
+            {/* Header */}
             <div className="p-5 border-b border-slate-150 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-950/30">
-              <div>
-                <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Защищенный шлюз Копи-банка</h3>
-                <span className="text-[9px] text-slate-400 font-medium block mt-0.5">ВЫСТАВЛЕН СЧЕТ ПО ЗАКАЗУ: <strong>{payingOrder.id}</strong></span>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">ЗАКАЗ В ОБРАБОТКЕ: <strong>{payingOrder.id}</strong></span>
               </div>
               <button
                 onClick={() => setPayingOrder(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-black"
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold text-lg"
               >
                 &times;
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
-              
-              {/* Security indicators */}
-              <div className="flex items-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-150 rounded-xl text-[10px] text-emerald-800 dark:text-emerald-400 font-bold">
-                <Shield className="w-4.5 h-4.5 text-emerald-500 shrink-0" />
-                <span>Шифрование связи TLS 1.3 и стандарт безопасности PCI-DSS</span>
+            <div className="p-6 text-center space-y-6">
+              {/* Graphic Pulsing Icon */}
+              <div className="mx-auto w-16 h-16 bg-emerald-50 dark:bg-emerald-950/35 border border-emerald-200/50 dark:border-emerald-900/50 text-emerald-500 rounded-full flex items-center justify-center animate-pulse shadow-md">
+                <Check className="w-8 h-8 stroke-[3]" />
               </div>
 
-              {/* Method toggler */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'card', label: 'Карта' },
-                  { id: 'sbp', label: 'СБП' },
-                  { id: 'qr', label: 'По QR-коду' },
-                  { id: 'on_receipt', label: 'При получении' }
-                ].map(method => (
-                  <button
-                    key={method.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(method.id as any)}
-                    className={`py-2 px-1 text-center font-bold text-[11px] rounded-xl border transition cursor-pointer ${
-                      paymentMethod === method.id
-                        ? 'border-indigo-600 bg-indigo-50/50 dark:bg-indigo-950/20 text-indigo-700 dark:text-indigo-400 font-extrabold shadow-xs'
-                        : 'border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/20'
-                    }`}
-                  >
-                    {method.label}
-                  </button>
-                ))}
+              {/* Text info */}
+              <div className="space-y-2">
+                <h3 className="text-base font-black text-slate-800 dark:text-white uppercase tracking-wide">Заказ принят на обработку!</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                  Ваш заказ успешно принят. Мы уже получили файлы и начинаем предпечатную подготовку оборудования на Северном шоссе, 18.
+                </p>
+                <p className="text-xs text-indigo-650 dark:text-indigo-400 font-black">
+                  Вам придет уведомление в чате и пуш-уведомление, как только оператор приступит к печати.
+                </p>
               </div>
 
-              {/* Total cost badge */}
-              <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl flex justify-between items-center text-xs border border-slate-150/40">
-                <span className="font-bold text-slate-550">
-                  {paymentMethod === 'on_receipt' ? 'К оплате при получении:' : 'Сумма списания:'}
-                </span>
-                <span className="text-base font-black text-slate-900 dark:text-white">₽{payingOrder.totalCost}</span>
+              {/* Order Details Briefing */}
+              <div className="p-4 bg-slate-50 dark:bg-slate-950/60 rounded-2xl border border-slate-150 dark:border-slate-850 text-left text-xs space-y-2 font-semibold">
+                <div className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5 text-slate-400">
+                  <span>Номер заказа:</span>
+                  <strong className="text-slate-700 dark:text-slate-300">{payingOrder.id}</strong>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5 text-slate-400">
+                  <span>Стоимость:</span>
+                  <strong className="text-slate-800 dark:text-white">₽{payingOrder.totalCost}</strong>
+                </div>
+                <div className="flex justify-between border-b border-slate-100 dark:border-slate-850 pb-1.5 text-slate-400">
+                  <span>Бумага:</span>
+                  <strong className="text-slate-700 dark:text-slate-300 uppercase">{payingOrder.paperType}</strong>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Цветность:</span>
+                  <strong className="text-slate-700 dark:text-slate-300">{payingOrder.printColor === 'bw' ? 'Черно-белая' : 'Цветная'}</strong>
+                </div>
               </div>
 
-              {/* CARD CONTAINER FLOW */}
-              {paymentMethod === 'card' && (
-                <form onSubmit={processSecurePayment} className="space-y-4">
-                  <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Номер банковской карты</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="4276 3800 1234 5678"
-                      value={cardNumber}
-                      maxLength={19}
-                      onChange={e => {
-                        // Card formatting auto structure
-                        const val = e.target.value.replace(/\D/g, '').match(/.{1,4}/g)?.join(' ') || '';
-                        setCardNumber(val);
-                      }}
-                      className="block w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-xs focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Срок действия</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        value={cardExpiry}
-                        onChange={e => {
-                          const val = e.target.value.replace(/\D/g, '');
-                          if (val.length > 2) {
-                            setCardExpiry(val.slice(0, 2) + '/' + val.slice(2, 4));
-                          } else {
-                            setCardExpiry(val);
-                          }
-                        }}
-                        className="block w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-950 text-xs focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">CVC / CVC2</label>
-                      <input
-                        type="password"
-                        required
-                        placeholder="***"
-                        maxLength={3}
-                        value={cardCvv}
-                        onChange={e => setCardCvv(e.target.value.replace(/\D/g, ''))}
-                        className="block w-full p-2.5 border border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50 dark:bg-slate-955 text-xs focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isProcessingPayment}
-                    className="w-full py-3 bg-indigo-650 hover:bg-indigo-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer bg-indigo-605"
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Шифрование и списание...
-                      </>
-                    ) : (
-                      <>Произвести оплату ₽{payingOrder.totalCost}</>
-                    )}
-                  </button>
-                </form>
-              )}
-
-              {/* SBP QR FLOW */}
-              {paymentMethod === 'sbp' && (
-                <div className="text-center space-y-4">
-                  <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed">
-                    Быстрая и защищенная оплата без ввода реквизитов банковской карты. Выберите ваш мобильный банк для моментального перехода в приложение СБП:
-                  </p>
-                  
-                  {/* Bank Grid */}
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { name: 'Sber', label: 'Сбер', color: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
-                      { name: 'T-Bank', label: 'Т-Банк', color: 'bg-yellow-400 hover:bg-yellow-500 text-slate-950' },
-                      { name: 'Alfa', label: 'Альфа', color: 'bg-rose-600 hover:bg-rose-700 text-white' },
-                      { name: 'VTB', label: 'ВТБ', color: 'bg-blue-600 hover:bg-blue-700 text-white' }
-                    ].map(bank => (
-                      <button
-                        key={bank.name}
-                        type="button"
-                        onClick={processSecurePayment}
-                        className={`py-2.5 px-1 rounded-xl text-[10px] font-black uppercase text-center cursor-pointer transition-transform hover:scale-105 active:scale-95 duration-150 ${bank.color}`}
-                      >
-                        {bank.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold tracking-wider my-1 uppercase">ИЛИ ПОДТВЕРДИТЕ ПЕРЕВОД:</div>
-
-                  <button
-                    onClick={processSecurePayment}
-                    disabled={isProcessingPayment}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Проверка зачисления СБП...
-                      </>
-                    ) : (
-                      <>Я перевел через мобильный банк</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* QR CODE PAYMENT FLOW */}
-              {paymentMethod === 'qr' && (
-                <div className="text-center space-y-4">
-                  <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed">
-                    Отсканируйте код ниже вашей камерой для проведения моментальной транзакции через Систему Быстрых Платежей или Копи-Банк:
-                  </p>
-                  
-                  {/* Real-like QR-code wrapping camera grid frame */}
-                  <div className="bg-slate-50 dark:bg-slate-950 p-4 inline-block rounded-3xl border border-slate-150 dark:border-slate-800 relative shadow-inner">
-                    <div className="absolute top-2 left-2 w-3.5 h-3.5 border-t-2 border-l-2 border-indigo-600 dark:border-indigo-400 rounded-tl-sm"></div>
-                    <div className="absolute top-2 right-2 w-3.5 h-3.5 border-t-2 border-r-2 border-indigo-600 dark:border-indigo-400 rounded-tr-sm"></div>
-                    <div className="absolute bottom-2 left-2 w-3.5 h-3.5 border-b-2 border-l-2 border-indigo-600 dark:border-indigo-400 rounded-bl-sm"></div>
-                    <div className="absolute bottom-2 right-2 w-3.5 h-3.5 border-b-2 border-r-2 border-indigo-600 dark:border-indigo-400 rounded-br-sm"></div>
-                    
-                    <svg className="w-44 h-44 mx-auto" viewBox="0 0 100 100" fill="none">
-                      {/* Stylized QR patterns */}
-                      <rect x="5" y="5" width="25" height="25" stroke="currentColor" strokeWidth="5" className="text-indigo-600 dark:text-indigo-400" />
-                      <rect x="12" y="12" width="11" height="11" fill="currentColor" className="text-indigo-600 dark:text-indigo-400" />
-                      <rect x="70" y="5" width="25" height="25" stroke="currentColor" strokeWidth="5" className="text-indigo-600 dark:text-indigo-400" />
-                      <rect x="77" y="12" width="11" height="11" fill="currentColor" className="text-indigo-650 dark:text-indigo-400" />
-                      <rect x="5" y="70" width="25" height="25" stroke="currentColor" strokeWidth="5" className="text-indigo-600 dark:text-indigo-400" />
-                      <rect x="12" y="77" width="11" height="11" fill="currentColor" className="text-indigo-655 dark:text-indigo-400" />
-                      
-                      {/* Static codes */}
-                      <rect x="40" y="10" width="12" height="4" fill="currentColor" className="text-slate-800 dark:text-slate-205" />
-                      <rect x="52" y="18" width="6" height="12" fill="currentColor" className="text-slate-800 dark:text-slate-205" />
-                      <rect x="35" y="32" width="20" height="6" fill="currentColor" className="text-slate-800 dark:text-slate-205" />
-                      <rect x="72" y="45" width="10" height="10" fill="currentColor" className="text-slate-800 dark:text-slate-205" />
-                      <rect x="45" y="72" width="15" height="15" fill="currentColor" className="text-slate-800 dark:text-slate-205" />
-                      <rect x="75" y="75" width="15" height="5" fill="currentColor" className="text-slate-800 dark:text-slate-205" />
-                      
-                      {/* Center SBP/System branding */}
-                      <circle cx="50" cy="50" r="10" fill="#1e1b4b" />
-                      <path d="M47 48 L53 48 L50 53 ZM46 51 H54" stroke="white" strokeWidth="1.5" />
-                    </svg>
-                    <div className="text-[10px] font-black uppercase text-indigo-600 dark:text-indigo-400 mt-1 select-none">ПЕЧАТЬ 24 QR</div>
-                  </div>
-
-                  <button
-                    onClick={processSecurePayment}
-                    disabled={isProcessingPayment}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Сканирование и зачисление...
-                      </>
-                    ) : (
-                      <>Я оплатил с помощью QR-кода</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* PAYMENT ON RECEIPT FLOW */}
-              {paymentMethod === 'on_receipt' && (
-                <div className="space-y-4">
-                  <div className="p-4 bg-blue-550/5 dark:bg-blue-950/15 border border-blue-100 dark:border-blue-900/40 rounded-2xl text-xs space-y-2.5 text-slate-600 dark:text-slate-350 leading-relaxed text-left">
-                    <p className="font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 uppercase tracking-wider text-[10px]">
-                      <span>ℹ️ Оплата при выдаче в копицентре</span>
-                    </p>
-                    <p>
-                      Вы можете оплатить Ваш заказ наличными или банковской картой непосредственно при получении готовых распечаток.
-                    </p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-wide">
-                      * Печать Вашего заказа начнется сразу, как оператор проверит файлы на соответствие!
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={processSecurePayment}
-                    disabled={isProcessingPayment}
-                    className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isProcessingPayment ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Оформление заказа...
-                      </>
-                    ) : (
-                      <>Оформить заказ с оплатой при получении</>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {/* Show completed visual */}
-              {paymentCompleted && (
-                <div className="absolute inset-0 bg-white dark:bg-slate-900 flex flex-col justify-center items-center text-center p-6 z-10 transition-all duration-300">
-                  <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 rounded-full flex items-center justify-center mb-4 animate-bounce">
-                    <Check className="w-10 h-10" />
-                  </div>
-                  <h4 className="text-base font-black text-slate-800 dark:text-white">
-                    {paymentMethod === 'on_receipt' ? 'Заказ успешно оформлен!' : 'Транзакция успешно проведена!'}
-                  </h4>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                    {paymentMethod === 'on_receipt' 
-                      ? 'Инструкции по заказу отправлены оператору. Печать уже запускается!' 
-                      : 'Счет закрыт. Копии файлов авторизованы для печати на ПК оператора.'}
-                  </p>
-                </div>
-              )}
-
+              {/* Back Button */}
+              <button
+                type="button"
+                onClick={() => setPayingOrder(null)}
+                className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Вернуться назад</span>
+              </button>
             </div>
 
           </div>
@@ -4273,9 +4149,63 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
       )}
 
       {/* GIFT PROMO MODAL FOR CLIENT */}
+      {/* Онбординг для новых клиентов */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)'}}>
+          <div className="w-full max-w-sm glass-panel rounded-3xl p-7 flex flex-col items-center gap-6 animate-fade-in">
+            {/* Логотип */}
+            <div className="w-16 h-16 rounded-2xl bg-indigo-600 flex items-center justify-center text-3xl shadow-lg">
+              🖨️
+            </div>
+            <div className="text-center">
+              <h2 className="text-xl font-black text-white mb-1">Добро пожаловать!</h2>
+              <p className="text-sm text-white/50">Фото-Север — печать онлайн за 3 шага</p>
+            </div>
+
+            {/* 3 шага */}
+            <div className="w-full space-y-3">
+              {[
+                { num: '1', icon: '📁', title: 'Загрузите файл', desc: 'Фото, документ, чертёж — любой формат' },
+                { num: '2', icon: '💳', title: 'Оплатите онлайн', desc: 'Безопасная оплата через ЮKassa' },
+                { num: '3', icon: '✅', title: 'Заберите готовое', desc: 'Северное шоссе, 18 — следите за статусом' },
+              ].map(step => (
+                <div key={step.num} className="flex items-center gap-3 p-3 bg-white/5 rounded-2xl border border-white/10">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600/30 flex items-center justify-center text-lg shrink-0">
+                    {step.icon}
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">{step.title}</p>
+                    <p className="text-white/40 text-[11px]">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => {
+                localStorage.setItem('onboarding_seen', '1');
+                setShowOnboarding(false);
+              }}
+              className="w-full py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-sm transition-all cursor-pointer"
+            >
+              Начать — загрузить файл →
+            </button>
+            <button
+              onClick={() => {
+                localStorage.setItem('onboarding_seen', '1');
+                setShowOnboarding(false);
+              }}
+              className="text-white/30 text-xs cursor-pointer hover:text-white/50 transition-colors"
+            >
+              Пропустить
+            </button>
+          </div>
+        </div>
+      )}
+
       {showPromoGiftModal && user.promoCode && (
         <div id="promo-postcard-modal" className="fixed inset-0 bg-black/65 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fade-in">
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, scale: 0.9, y: 30 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 30 }}
@@ -4479,6 +4409,366 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
           </motion.button>
         </div>
       )}
+
+      {/* Interactive Compliance Documents Modal */}
+      {activeLegalDoc && (
+        <div className="fixed inset-0 z-55 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl p-6 md:p-8 flex flex-col max-h-[85vh] border border-slate-150 dark:border-slate-800 shadow-2xl relative">
+            <button 
+              onClick={() => setActiveLegalDoc(null)} 
+              className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-450 dark:text-slate-400 cursor-pointer"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            
+            <h2 className="text-sm font-black uppercase tracking-wider text-slate-850 dark:text-white border-b border-slate-100 dark:border-slate-850 pb-3 mb-4 select-none text-left">
+              {activeLegalDoc === 'privacy' && 'Политика конфиденциальности (152-ФЗ РФ)'}
+              {activeLegalDoc === 'terms' && 'Договор публичной оферты'}
+              {activeLegalDoc === 'delivery' && 'Условия оплаты, доставки и возврата средств'}
+            </h2>
+            
+            <div className="overflow-y-auto space-y-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium md:pr-2 text-left">
+              {activeLegalDoc === 'privacy' && (
+                <>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">1. Общие положения</p>
+                  <p>Настоящая политика обработки персональных данных составлена в соответствии с требованиями Федерального закона от 27.07.2006 № 152-ФЗ «О персональных данных» и определяет порядок обработки персональных данных и меры по осуществлению безопасности персональных данных ИП Оганнисян Д.В. (Фото-Север).</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">2. Собираемые данные</p>
+                  <p>Мы обрабатываем исключительно данные, необходимые для авторизации и доставки выполненных заказов печати: ФИО, номер телефона, адрес электронной почты, отправляемые к печати файлы, детали параметров печати.</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">3. Цели сбора</p>
+                  <p>Персональные данные Пользователя обрабатываются для идентификации клиента, отправки оповещений о готовности через встроенный пуш-интерфейс, выполнения логистики и расчетов в соответствии с правилами Visa, MasterCard и МИР.</p>
+                </>
+              )}
+              {activeLegalDoc === 'terms' && (
+                <>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">Публичная оферта на оказание услуг фотопечати и полиграфии</p>
+                  <p>Данный документ является официальным предложением (публичной офертой) ИП Оганнисян Д.В. и содержит все существенные условия по предоставлению услуг распечатки документов различных типов и широкоформатной фотопечати через удаленную систему On-line заказов.</p>
+                  <p>Акцептом данной оферты признается создание заказа, загрузка файлов и произведение оплаты на сайте с использованием встроенных расчетных шлюзов банков ( acquiring ).</p>
+                  <p>Исполнитель обязуется напечатать предоставленные файлы СТРОГО в соответствии со спецификацией и качеством, согласованными в системе заказа. Оплата услуг производится в российских рублях.</p>
+                </>
+              )}
+              {activeLegalDoc === 'delivery' && (
+                <>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">1. Способы оплаты заказа</p>
+                  <p>Оплата заказов осуществляется через Сертифицированный банковский эквайринг (МИР, Visa, MasterCard) после подтверждения характеристик файла. Опционально возможна быстрая оплата на кассе или через СБП QR в пункте выдачи.</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">2. Условия выдачи и доставки</p>
+                  <p>Выдача заказов производится по адресу: Вологда, Северное шоссе, д. 18. Возможна курьерская доставка по согласованию с оператором.</p>
+                  <p className="font-extrabold text-slate-800 dark:text-slate-200">3. Политика отмены и возврата денежных средств</p>
+                  <p>Клиент вправе отменить заказ до момента его ухода в производство с полной компенсацией средств. В случае обнаружения дефектов печати или несовпадения с заданными параметрами, Копи-Центр обязуется осуществить повторную бесплатную печать либо инициировать полный возврат на банковскую карту плательщика в течении 1 рабочего дня (срок зачисления банка составляет от 1 до 3 рабочих дней).</p>
+                </>
+              )}
+            </div>
+            
+            <button 
+              onClick={() => setActiveLegalDoc(null)} 
+              className="mt-6 w-full py-3 bg-slate-900 hover:bg-slate-850 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-bold text-white rounded-2xl cursor-pointer"
+            >
+              Понятно, закрыть
+            </button>
+          </div>
+        </div>
+      )}
+
+          {/* ── CONTACTS TAB ── */}
+          {activeTab === 'contacts' && (
+          <motion.div
+            key="contacts"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.22 }}
+            className="space-y-5 pb-8 md:overflow-y-auto md:flex-1 min-h-0 pr-1 w-full overflow-x-hidden"
+          >
+            <div className="mb-6">
+              <h2 className="text-xl font-black text-white mb-1">Контакты студии</h2>
+              <p className="text-sm text-slate-400">Мы всегда рады помочь вам!</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
+              <div className="w-11 h-11 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Адрес</p>
+                <p className="text-white font-bold text-base">Северное шоссе, 18</p>
+                <p className="text-slate-400 text-sm">Раменское, Московская область</p>
+                <a href="https://yandex.ru/maps/?text=Раменское+Северное+шоссе+18" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
+                  Открыть на карте →
+                </a>
+              </div>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
+              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
+                <Phone className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Телефон</p>
+                <a href="tel:+79680508800" className="text-white font-bold text-base hover:text-emerald-400 transition-colors">
+                  +7 (968) 050-88-00
+                </a>
+                <p className="text-slate-400 text-sm mt-0.5">Звонки и WhatsApp</p>
+              </div>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
+              <div className="w-11 h-11 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
+                <MessageSquare className="w-5 h-5 text-sky-400" />
+              </div>
+              <div>
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Telegram</p>
+                <a href="https://t.me/photosever18" target="_blank" rel="noopener noreferrer" className="text-white font-bold text-base hover:text-sky-400 transition-colors">
+                  @photosever18
+                </a>
+                <p className="text-slate-400 text-sm mt-0.5">Пишите в любое время</p>
+              </div>
+            </div>
+
+            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
+              <div className="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="w-full">
+                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-3">Часы работы</p>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm">Понедельник — Пятница</span>
+                    <span className="text-white font-bold text-sm">9:00 — 19:00</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm">Суббота</span>
+                    <span className="text-white font-bold text-sm">10:00 — 19:00</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-300 text-sm">Воскресенье</span>
+                    <span className="text-white font-bold text-sm">10:00 — 19:00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
+
+            <a href="tel:+79680508800" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm hover:opacity-90 transition-opacity">
+              <Phone className="w-4 h-4" />
+              Позвонить нам
+            </a>
+
+          </motion.div>
+          )}
+
+          {/* ── SERVICES TAB ── */}
+          {activeTab === 'services' && (
+          <motion.div
+            key="services"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.22 }}
+            className="space-y-5 pb-8 md:overflow-y-auto md:flex-1 min-h-0 pr-1 w-full overflow-x-hidden"
+          >
+            <div className="mb-6">
+              <h2 className="text-xl font-black text-white mb-1">Наши услуги</h2>
+              <p className="text-sm text-slate-400">Всё что мы делаем в Фото-Север на Северном шоссе, 18</p>
+            </div>
+
+            {(!database.services || database.services.filter(s => s.isActive).length === 0) && (
+              <div className="text-center py-16 text-slate-400">
+                <Printer className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p className="font-bold">Витрина услуг пока пуста</p>
+                <p className="text-sm mt-1">Скоро здесь появятся все наши услуги</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              {(database.services || [])
+                .filter(s => s.isActive)
+                .map(svc => {
+                  // Генерируем 3D SVG иконку по эмодзи/названию
+                  const get3DIcon = (emoji: string, title: string) => {
+                    const t = title.toLowerCase();
+                    const e = emoji;
+                    // Фото на документы
+                    if ((t.includes('фото') && (t.includes('докум') || t.includes('документ'))) || e === '🪪' || e === '📷') return (
+                      <svg width="72" height="72" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 8px 16px rgba(168,85,247,0.35))'}}>
+                        <defs>
+                          <linearGradient id={`g2-${svc.id}`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#c084fc"/><stop offset="100%" stopColor="#a855f7"/></linearGradient>
+                          <linearGradient id={`g2t-${svc.id}`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#e9d5ff"/><stop offset="100%" stopColor="#c084fc"/></linearGradient>
+                        </defs>
+                        <ellipse cx="40" cy="74" rx="20" ry="4" fill="rgba(168,85,247,0.2)"/>
+                        <rect x="10" y="38" width="60" height="24" rx="10" fill="#7c3aed"/>
+                        <rect x="10" y="26" width="60" height="20" rx="10" fill={`url(#g2-${svc.id})`}/>
+                        <rect x="28" y="20" width="20" height="10" rx="5" fill={`url(#g2t-${svc.id})`}/>
+                        <circle cx="40" cy="38" r="14" fill="#1e1b4b"/>
+                        <circle cx="40" cy="38" r="10" fill="#0f0a2e"/>
+                        <circle cx="40" cy="38" r="6" fill="#312e81"/>
+                        <circle cx="37" cy="35" r="2.5" fill="rgba(255,255,255,0.45)"/>
+                        <rect x="54" y="29" width="8" height="5" rx="2.5" fill="rgba(255,255,255,0.5)"/>
+                        <rect x="14" y="28" width="28" height="5" rx="3" fill="rgba(255,255,255,0.22)"/>
+                      </svg>
+                    );
+                    if (t.includes('переплёт') || t.includes('переплет') || t.includes('binding') || e === '📎' || e === '📚') return (
+                      <svg width="72" height="72" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 8px 16px rgba(249,115,22,0.35))'}}>
+                        <defs>
+                          <linearGradient id={`g3-${svc.id}`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#fb923c"/><stop offset="100%" stopColor="#f97316"/></linearGradient>
+                        </defs>
+                        <ellipse cx="40" cy="74" rx="20" ry="4" fill="rgba(249,115,22,0.2)"/>
+                        <rect x="22" y="16" width="44" height="52" rx="4" fill="#fef3c7"/>
+                        <rect x="14" y="12" width="52" height="54" rx="6" fill={`url(#g3-${svc.id})`}/>
+                        <rect x="56" y="16" width="6" height="46" rx="2" fill="#fef9c3"/>
+                        <rect x="24" y="24" width="24" height="3" rx="1.5" fill="rgba(255,255,255,0.5)"/>
+                        <rect x="24" y="31" width="18" height="2" rx="1" fill="rgba(255,255,255,0.35)"/>
+                        <rect x="24" y="37" width="22" height="2" rx="1" fill="rgba(255,255,255,0.25)"/>
+                        <circle cx="20" cy="26" r="4" fill="none" stroke="#94a3b8" strokeWidth="2.5"/>
+                        <circle cx="20" cy="36" r="4" fill="none" stroke="#94a3b8" strokeWidth="2.5"/>
+                        <circle cx="20" cy="46" r="4" fill="none" stroke="#94a3b8" strokeWidth="2.5"/>
+                        <circle cx="20" cy="56" r="4" fill="none" stroke="#94a3b8" strokeWidth="2.5"/>
+                        <rect x="18" y="14" width="28" height="7" rx="3.5" fill="rgba(255,255,255,0.28)"/>
+                      </svg>
+                    );
+                    if (t.includes('скан') || e === '🔍' || e === '📠') return (
+                      <svg width="72" height="72" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 8px 16px rgba(16,185,129,0.35))'}}>
+                        <defs>
+                          <linearGradient id={`g4-${svc.id}`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#34d399"/><stop offset="100%" stopColor="#10b981"/></linearGradient>
+                          <linearGradient id={`g4scan-${svc.id}`} x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="rgba(52,211,153,0)"/><stop offset="50%" stopColor="rgba(52,211,153,0.7)"/><stop offset="100%" stopColor="rgba(52,211,153,0)"/></linearGradient>
+                        </defs>
+                        <ellipse cx="40" cy="74" rx="20" ry="4" fill="rgba(16,185,129,0.2)"/>
+                        <rect x="12" y="50" width="56" height="14" rx="7" fill="#065f46"/>
+                        <rect x="12" y="44" width="56" height="12" rx="7" fill={`url(#g4-${svc.id})`}/>
+                        <rect x="16" y="16" width="48" height="34" rx="5" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.25)" strokeWidth="1"/>
+                        <rect x="22" y="20" width="36" height="26" rx="3" fill="white" opacity="0.9"/>
+                        <rect x="26" y="24" width="20" height="2" rx="1" fill="#bfdbfe"/>
+                        <rect x="26" y="28" width="24" height="2" rx="1" fill="#bfdbfe"/>
+                        <rect x="26" y="32" width="16" height="2" rx="1" fill="#bfdbfe"/>
+                        <rect x="16" y="30" width="48" height="3" rx="1.5" fill={`url(#g4scan-${svc.id})`}><animate attributeName="y" values="20;44;20" dur="2s" repeatCount="indefinite"/></rect>
+                        <circle cx="62" cy="50" r="4" fill="#34d399"/>
+                        <rect x="16" y="44" width="26" height="5" rx="2.5" fill="rgba(255,255,255,0.28)"/>
+                      </svg>
+                    );
+                    // Default — принтер синий
+                    return (
+                      <svg width="72" height="72" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" style={{filter:'drop-shadow(0 8px 16px rgba(59,130,246,0.35))'}}>
+                        <defs>
+                          <linearGradient id={`g1-${svc.id}`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#60a5fa"/><stop offset="100%" stopColor="#3b82f6"/></linearGradient>
+                          <linearGradient id={`g1t-${svc.id}`} x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stopColor="#93c5fd"/><stop offset="100%" stopColor="#60a5fa"/></linearGradient>
+                        </defs>
+                        <ellipse cx="40" cy="74" rx="20" ry="4" fill="rgba(59,130,246,0.2)"/>
+                        <rect x="14" y="36" width="52" height="26" rx="8" fill="#1d4ed8"/>
+                        <rect x="14" y="28" width="52" height="16" rx="8" fill={`url(#g1-${svc.id})`}/>
+                        <rect x="16" y="26" width="48" height="10" rx="6" fill={`url(#g1t-${svc.id})`}/>
+                        <rect x="30" y="10" width="20" height="24" rx="3" fill="white" opacity="0.95"/>
+                        <rect x="34" y="14" width="12" height="2" rx="1" fill="#bfdbfe"/>
+                        <rect x="34" y="18" width="9" height="2" rx="1" fill="#bfdbfe"/>
+                        <rect x="34" y="22" width="11" height="2" rx="1" fill="#bfdbfe"/>
+                        <rect x="24" y="38" width="32" height="4" rx="2" fill="rgba(0,0,0,0.2)"/>
+                        <circle cx="54" cy="32" r="3" fill="#34d399"/>
+                        <circle cx="62" cy="32" r="3" fill="rgba(255,255,255,0.3)"/>
+                        <rect x="18" y="28" width="26" height="5" rx="3" fill="rgba(255,255,255,0.28)"/>
+                      </svg>
+                    );
+                  };
+
+                  return (
+                    <div
+                      key={svc.id}
+                      className="group relative rounded-2xl overflow-hidden cursor-pointer"
+                      style={{
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                        backdropFilter: 'blur(16px)',
+                        transition: 'transform 0.3s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.3s, background 0.3s',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.13)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 40px rgba(0,0,0,0.3)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.transform = '';
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '';
+                      }}
+                    >
+                      {/* Иконка зона */}
+                      <div className="flex items-center justify-center py-6" style={{background: 'radial-gradient(circle at 60% 30%, rgba(255,255,255,0.06) 0%, transparent 70%)'}}>
+                        {svc.imageUrl ? (
+                          <img src={svc.imageUrl} alt={svc.title} className="w-20 h-20 object-cover rounded-xl"/>
+                        ) : (
+                          get3DIcon(svc.emoji, svc.title)
+                        )}
+                      </div>
+
+                      {/* Контент */}
+                      <div className="px-3 pb-3">
+                        <p className="text-white font-black text-xs leading-tight mb-0.5">{svc.title}</p>
+                        <p className="text-slate-400 text-[10px] leading-relaxed line-clamp-2">{svc.description}</p>
+                      </div>
+
+                      {/* Drawer — на десктопе при hover, на мобильном всегда */}
+                      <div
+                        className="overflow-hidden transition-all duration-300 md:max-h-0 md:group-hover:max-h-[80px]"
+                        style={{maxHeight: '80px'}}
+                      >
+                        <div style={{borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', padding: '10px 12px 12px'}}>
+                          <p className="text-emerald-400 font-black text-base">{svc.price}</p>
+                          <button
+                            onClick={() => {
+                              const priceNum = parseInt(svc.price.replace(/[^0-9]/g, ''), 10) || 0;
+                              setSelectedService({ title: svc.title, price: priceNum });
+                              setNotes(`Услуга: ${svc.title} — ${svc.price}`);
+                              setActiveTab('upload');
+                            }}
+                            className="mt-1.5 w-full py-2 rounded-xl text-[11px] font-black text-white transition-all cursor-pointer"
+                            style={{background: 'linear-gradient(135deg, #6366f1, #8b5cf6)'}}
+                          >
+                            Заказать →
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <button
+              onClick={() => setActiveTab('upload')}
+              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm hover:opacity-90 transition-opacity mt-4"
+            >
+              <Printer className="w-4 h-4" />
+              Оформить заказ
+            </button>
+
+          </motion.div>
+          )}
+
+
+
+    {/* Sticky кнопки звонка и Telegram — только на мобильном */}
+    <div className="fixed bottom-4 right-4 flex flex-col gap-2 z-50 md:hidden">
+      <a
+        href="https://t.me/photosever_bot"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
+        style={{background: 'linear-gradient(135deg, #2AABEE, #229ED9)'}}
+        title="Написать в Telegram"
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
+          <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248l-2.01 9.47c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.873.75z"/>
+        </svg>
+      </a>
+      <a
+        href="tel:+79680508800"
+        className="w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95"
+        style={{background: 'linear-gradient(135deg, #4ade80, #16a34a)'}}
+        title="Позвонить"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+          <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+        </svg>
+      </a>
+    </div>
 
     </div>
   );
