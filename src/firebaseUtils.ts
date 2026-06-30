@@ -189,6 +189,17 @@ export async function signOutUserWithFirebase(): Promise<void> {
 }
 
 /**
+ * Deletes a single order document from Firestore
+ */
+export async function deleteOrderFromFirebase(orderId: string): Promise<void> {
+  try {
+    await deleteDoc(doc(db, 'orders', orderId));
+  } catch (e) {
+    handleFirestoreError(e, OperationType.DELETE, `orders/${orderId}`);
+  }
+}
+
+/**
  * Deletes user profile and related resources from Firestore
  */
 export async function deleteUserAccountWithFirebase(userId: string): Promise<void> {
