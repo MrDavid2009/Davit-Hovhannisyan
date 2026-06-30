@@ -3,12 +3,34 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { Lock, Mail, User as UserIcon, Phone, FileText, ArrowRight, ShieldAlert, CheckCircle, Smartphone, Sparkles, Printer } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { signInUserWithFirebase, registerUserWithFirebase } from '../firebaseUtils';
 import { motion } from 'motion/react';
+
+// Яркий голубой градиент фона окна входа (наносится напрямую через inline-style,
+// чтобы гарантированно отображаться независимо от порядка загрузки CSS-файлов)
+const AUTH_BG_LIGHT = {
+  backgroundColor: '#1d4ed8',
+  backgroundImage:
+    'radial-gradient(circle at 12% 6%, #fef3c7 0%, transparent 36%),' +
+    'radial-gradient(circle at 90% 10%, #bae6fd 0%, transparent 42%),' +
+    'radial-gradient(circle at 15% 60%, #38bdf8 0%, transparent 45%),' +
+    'radial-gradient(circle at 50% 100%, #1e40af 0%, #1e3a8a 55%, #0b1530 100%)',
+  backgroundAttachment: 'fixed' as const,
+};
+
+const AUTH_BG_DARK = {
+  backgroundColor: '#0b1530',
+  backgroundImage:
+    'radial-gradient(circle at 12% 6%, #1e3a5f 0%, transparent 40%),' +
+    'radial-gradient(circle at 90% 10%, #0c4a6e 0%, transparent 42%),' +
+    'radial-gradient(circle at 15% 60%, #1d4ed8 0%, transparent 45%),' +
+    'radial-gradient(circle at 50% 100%, #172554 0%, #0b1530 55%, #020617 100%)',
+  backgroundAttachment: 'fixed' as const,
+};
 
 interface AuthScreenProps {
   onAuthSuccess: (user: User) => void;
@@ -26,6 +48,15 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
   const [successMsg, setSuccessMsg] = useState('');
   const [isForgotPasswordSent, setIsForgotPasswordSent] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState<boolean>(() => document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   const resetMessages = () => {
     setErrorMsg('');
@@ -201,7 +232,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
   };
 
   return (
-    <div id="auth-screen-root" className="auth-ocean-bg min-h-screen flex flex-col justify-center items-center py-14 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden select-none">
+    <div id="auth-screen-root" className="min-h-screen flex flex-col justify-center items-center py-14 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden select-none" style={isDark ? AUTH_BG_DARK : AUTH_BG_LIGHT}>
 
       {/* Floating 3D Frosted Glass Orbs mirroring the uploaded design */}
       <div className="glass-bg-orb w-[180px] h-[180px] top-[12%] left-[6%] opacity-70 animate-[float-slow_16s_infinite_ease-in-out]" style={{ backdropFilter: 'blur(12px) saturate(110%)' }} />
