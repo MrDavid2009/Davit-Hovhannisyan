@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 export function ThemeToggle() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
@@ -11,6 +11,11 @@ export function ThemeToggle() {
     if (stored === 'dark' || stored === 'light') return stored;
     return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   });
+
+  const glowRef = useRef<HTMLDivElement>(null);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const angleRef = useRef(0);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -20,6 +25,19 @@ export function ThemeToggle() {
     }
     localStorage.setItem('print_shop_theme', theme);
   }, [theme]);
+
+  // Бесконечное вращение неонового кольца через requestAnimationFrame
+  useEffect(() => {
+    const spin = () => {
+      angleRef.current += 1.5;
+      const deg = `${angleRef.current}deg`;
+      if (glowRef.current) glowRef.current.style.setProperty('--ng', deg);
+      if (lineRef.current) lineRef.current.style.setProperty('--nl', deg);
+      rafRef.current = requestAnimationFrame(spin);
+    };
+    rafRef.current = requestAnimationFrame(spin);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   const toggleTheme = () => {
     setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
@@ -35,99 +53,125 @@ export function ThemeToggle() {
       title={isDark ? 'Переключить на светлую тему' : 'Переключить на темную тему'}
       style={{
         position: 'relative',
-        width: 72,
-        height: 36,
-        borderRadius: 999,
+        width: 76,
+        height: 34,
         border: 'none',
         cursor: 'pointer',
         padding: 0,
-        background: isDark
-          ? 'linear-gradient(135deg, #1a1030, #0d0820)'
-          : 'linear-gradient(135deg, #fef3c7, #fde68a)',
-        boxShadow: isDark
-          ? 'inset 0 2px 6px rgba(0,0,0,0.5), 0 0 16px rgba(167,139,250,0.5), 0 0 4px rgba(167,139,250,0.6)'
-          : 'inset 0 2px 6px rgba(0,0,0,0.08), 0 0 16px rgba(251,191,36,0.45), 0 0 4px rgba(251,191,36,0.5)',
-        transition: 'background 0.4s ease, box-shadow 0.4s ease',
-        outline: 'none',
-        flexShrink: 0,
+        background: 'transparent',
       }}
     >
-      {/* Текст ON / OFF внутри трека */}
-      <span
+      {/* Вращающееся неоновое свечение по контуру */}
+      <div
+        ref={glowRef}
         style={{
           position: 'absolute',
-          left: 10,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: '0.06em',
-          color: isDark ? 'rgba(167,139,250,0.9)' : 'transparent',
-          opacity: isDark ? 1 : 0,
-          transition: 'opacity 0.3s ease',
+          inset: -6,
+          borderRadius: 999,
+          background: isDark
+            ? `conic-gradient(from var(--ng,0deg), transparent 0deg, rgba(180,100,255,0.8) 60deg, rgba(255,255,255,0.9) 90deg, rgba(180,100,255,0.8) 120deg, transparent 180deg, transparent 360deg)`
+            : `conic-gradient(from var(--ng,0deg), transparent 0deg, rgba(255,200,50,0.7) 60deg, rgba(255,255,200,0.9) 90deg, rgba(255,200,50,0.7) 120deg, transparent 180deg, transparent 360deg)`,
+          filter: 'blur(7px)',
+          opacity: 0.75,
           pointerEvents: 'none',
         }}
-      >
-        ON
-      </span>
-      <span
-        style={{
-          position: 'absolute',
-          right: 9,
-          top: '50%',
-          transform: 'translateY(-50%)',
-          fontSize: 9,
-          fontWeight: 800,
-          letterSpacing: '0.06em',
-          color: isDark ? 'transparent' : 'rgba(180,140,20,0.7)',
-          opacity: isDark ? 0 : 1,
-          transition: 'opacity 0.3s ease',
-          pointerEvents: 'none',
-        }}
-      >
-        OFF
-      </span>
+      />
 
-      {/* Бегунок с кольцом-свечением */}
-      <span
+      {/* Основное тело переключателя */}
+      <div
         style={{
           position: 'absolute',
-          top: 3,
-          left: isDark ? 39 : 3,
-          width: 30,
-          height: 30,
+          inset: 0,
+          borderRadius: 999,
+          background: isDark
+            ? 'linear-gradient(145deg,#1a0a22,#0d0512)'
+            : 'linear-gradient(145deg,#e8eef5,#d0dce8)',
+          border: isDark ? '1px solid rgba(200,150,255,0.3)' : '1px solid rgba(255,255,255,0.8)',
+          boxShadow: isDark
+            ? 'inset 0 2px 8px rgba(0,0,0,0.8), inset 0 -1px 2px rgba(200,150,255,0.1)'
+            : 'inset 0 2px 8px rgba(100,120,150,0.2), inset 0 -1px 2px rgba(255,255,255,0.8)',
+          overflow: 'hidden',
+          transition: 'all 0.5s ease',
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: '50%',
+            right: 9,
+            transform: 'translateY(-50%)',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            color: 'rgba(200,150,255,0.7)',
+            opacity: isDark ? 1 : 0,
+            transition: 'opacity 0.4s',
+            pointerEvents: 'none',
+          }}
+        >OFF</span>
+        <span
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: 9,
+            transform: 'translateY(-50%)',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            color: '#475569',
+            opacity: isDark ? 0 : 1,
+            transition: 'opacity 0.4s',
+            pointerEvents: 'none',
+          }}
+        >ON</span>
+      </div>
+
+      {/* Тонкая вращающаяся линия свечения по контуру */}
+      <div
+        ref={lineRef}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          borderRadius: 999,
+          background: isDark
+            ? `conic-gradient(from var(--nl,0deg), transparent 0deg, transparent 40deg, rgba(220,150,255,0.9) 60deg, rgba(255,255,255,1) 75deg, rgba(220,150,255,0.9) 90deg, transparent 110deg, transparent 360deg)`
+            : `conic-gradient(from var(--nl,0deg), transparent 0deg, transparent 40deg, rgba(255,200,50,0.9) 60deg, rgba(255,255,200,1) 75deg, rgba(255,200,50,0.9) 90deg, transparent 110deg, transparent 360deg)`,
+          WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), white calc(100% - 2px))',
+          mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), white calc(100% - 2px))',
+          pointerEvents: 'none',
+        }}
+      />
+
+      {/* Шарик-переключатель */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 4,
+          left: isDark ? 4 : 44,
+          width: 26,
+          height: 26,
           borderRadius: '50%',
           background: isDark
-            ? 'radial-gradient(circle at 35% 30%, #c4b5fd, #7c3aed 70%)'
-            : 'radial-gradient(circle at 35% 30%, #fffbeb, #f59e0b 75%)',
+            ? 'radial-gradient(circle at 35% 30%, rgba(220,180,255,0.4), rgba(100,50,150,0.8))'
+            : 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.9), rgba(200,220,240,0.8))',
+          border: isDark ? '1px solid rgba(200,150,255,0.5)' : '1px solid rgba(255,255,255,0.9)',
           boxShadow: isDark
-            ? '0 0 0 3px rgba(124,58,237,0.25), 0 0 14px rgba(167,139,250,0.9), 0 2px 6px rgba(0,0,0,0.4)'
-            : '0 0 0 3px rgba(251,191,36,0.25), 0 0 14px rgba(251,191,36,0.85), 0 2px 6px rgba(0,0,0,0.15)',
-          transition: 'left 0.4s cubic-bezier(0.34,1.4,0.64,1), background 0.4s ease, box-shadow 0.4s ease',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
+            ? 'inset 0 2px 4px rgba(255,255,255,0.2), inset 0 -2px 4px rgba(0,0,0,0.4), 0 0 14px rgba(180,100,255,0.6), 0 4px 10px rgba(0,0,0,0.5)'
+            : 'inset 0 2px 4px rgba(255,255,255,0.8), 0 0 10px rgba(255,220,100,0.4), 0 4px 10px rgba(100,120,150,0.3)',
+          transition: 'all 0.4s cubic-bezier(0.34,1.4,0.64,1)',
+          zIndex: 3,
+          overflow: 'hidden',
         }}
       >
-        {/* Внутренняя иконка солнца/луны - простая SVG */}
-        {isDark ? (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.95">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          </svg>
-        ) : (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.95">
-            <circle cx="12" cy="12" r="4" />
-            <line x1="12" y1="2" x2="12" y2="4" />
-            <line x1="12" y1="20" x2="12" y2="22" />
-            <line x1="4.93" y1="4.93" x2="6.34" y2="6.34" />
-            <line x1="17.66" y1="17.66" x2="19.07" y2="19.07" />
-            <line x1="2" y1="12" x2="4" y2="12" />
-            <line x1="20" y1="12" x2="22" y2="12" />
-            <line x1="4.93" y1="19.07" x2="6.34" y2="17.66" />
-            <line x1="17.66" y1="6.34" x2="19.07" y2="4.93" />
-          </svg>
-        )}
-      </span>
+        <div
+          style={{
+            position: 'absolute',
+            top: 3, left: 5, right: 5, height: 7,
+            background: 'radial-gradient(ellipse, rgba(255,255,255,0.4) 0%, transparent 70%)',
+            borderRadius: '50%',
+          }}
+        />
+      </div>
     </button>
   );
 }
