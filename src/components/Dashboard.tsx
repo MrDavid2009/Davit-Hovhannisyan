@@ -4781,6 +4781,10 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                         </div>
                       </div>
                     </div>
+                  );
+                })}
+            </div>
+          </motion.div>
           )}
 
 
