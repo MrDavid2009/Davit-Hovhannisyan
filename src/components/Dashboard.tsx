@@ -209,6 +209,37 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   });
 
   useEffect(() => {
+    // 3D tilt effect on icon hover (mouse tracking)
+    const icons = document.querySelectorAll('.glass-icon-capsule');
+    const handlers: Array<{el: Element, move: any, leave: any}> = [];
+
+    icons.forEach(icon => {
+      const move = (e: MouseEvent) => {
+        const rect = icon.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width - 0.5;
+        const y = (e.clientY - rect.top) / rect.height - 0.5;
+        (icon as HTMLElement).style.transform = `perspective(150px) rotateX(${-y * 14}deg) rotateY(${x * 14}deg) translateY(-2px)`;
+      };
+      const leave = () => {
+        (icon as HTMLElement).style.transform = '';
+      };
+      const parent = icon.closest('button');
+      if (parent) {
+        parent.addEventListener('mousemove', move);
+        parent.addEventListener('mouseleave', leave);
+        handlers.push({ el: parent, move, leave });
+      }
+    });
+
+    return () => {
+      handlers.forEach(({ el, move, leave }) => {
+        el.removeEventListener('mousemove', move);
+        el.removeEventListener('mouseleave', leave);
+      });
+    };
+  }, []);
+
+  useEffect(() => {
     const root = document.documentElement;
     
     if (designTheme === 'blue') {
@@ -4672,46 +4703,67 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   return (
                     <div
                       key={svc.id}
-                      className="group relative rounded-2xl overflow-hidden cursor-pointer"
+                      className="group relative overflow-hidden cursor-pointer select-none"
                       style={{
-                        background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(255,255,255,0.14)',
-                        backdropFilter: 'blur(16px)',
-                        transition: 'transform 0.3s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.3s, background 0.3s',
+                        background: '#fff',
+                        borderRadius: '20px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                        transition: 'transform 0.3s cubic-bezier(0.34,1.4,0.64,1), box-shadow 0.3s',
+                        display: 'flex',
+                        flexDirection: 'column',
                       }}
                       onMouseEnter={e => {
-                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
-                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.13)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '0 16px 40px rgba(0,0,0,0.3)';
+                        (e.currentTarget as HTMLElement).style.transform = 'translateY(-6px) scale(1.02)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '0 20px 50px rgba(0,0,0,0.15)';
                       }}
                       onMouseLeave={e => {
                         (e.currentTarget as HTMLElement).style.transform = '';
-                        (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.08)';
-                        (e.currentTarget as HTMLElement).style.boxShadow = '';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
                       }}
                     >
-                      {/* Иконка зона */}
-                      <div className="flex items-center justify-center py-6" style={{background: 'radial-gradient(circle at 60% 30%, rgba(255,255,255,0.06) 0%, transparent 70%)'}}>
+                      {/* Картинка сверху */}
+                      <div style={{
+                        height: 160,
+                        overflow: 'hidden',
+                        borderRadius: '20px 20px 0 0',
+                        background: 'linear-gradient(135deg,#f0f4ff,#e8eeff)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}>
                         {svc.imageUrl ? (
-                          <img src={svc.imageUrl} alt={svc.title} className="w-20 h-20 object-cover rounded-xl"/>
+                          <img src={svc.imageUrl} alt={svc.title}
+                            style={{width:'100%',height:'100%',objectFit:'cover'}}
+                            onError={e => { (e.currentTarget as HTMLImageElement).style.display='none'; }}
+                          />
                         ) : (
-                          get3DIcon(svc.emoji, svc.title)
+                          <div style={{transform:'scale(1.1)'}}>{get3DIcon(svc.emoji, svc.title)}</div>
                         )}
                       </div>
 
-                      {/* Контент */}
-                      <div className="px-3 pb-3">
-                        <p className="text-white font-black text-xs leading-tight mb-0.5">{svc.title}</p>
-                        <p className="text-slate-400 text-[10px] leading-relaxed line-clamp-2">{svc.description}</p>
+                      {/* Название и описание */}
+                      <div style={{padding:'12px 14px 8px',background:'#fff'}}>
+                        <p style={{fontWeight:800,fontSize:13,color:'#1e293b',margin:'0 0 3px',lineHeight:1.2}}>{svc.title}</p>
+                        <p style={{fontSize:11,color:'#94a3b8',margin:0,lineHeight:1.4}}>
+                          {svc.description?.slice(0,50)}{(svc.description?.length||0) > 50 ? '...' : ''}
+                        </p>
                       </div>
 
-                      {/* Drawer — на десктопе при hover, на мобильном всегда */}
+                      {/* Hover drawer — выезжает снизу */}
                       <div
-                        className="overflow-hidden transition-all duration-300 md:max-h-0 md:group-hover:max-h-[80px]"
-                        style={{maxHeight: '80px'}}
+                        style={{
+                          overflow: 'hidden',
+                          maxHeight: 0,
+                          transition: 'max-height 0.35s cubic-bezier(0.34,1.2,0.64,1)',
+                          background: '#fff',
+                          borderRadius: '0 0 20px 20px',
+                          borderTop: '1px solid #f1f5f9',
+                        }}
+                        className="service-card-drawer"
                       >
-                        <div style={{borderTop: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)', padding: '10px 12px 12px'}}>
-                          <p className="text-emerald-400 font-black text-base">{svc.price}</p>
+                        <div style={{padding:'8px 14px 14px'}}>
+                          <p style={{fontWeight:900,fontSize:20,color:'#6366f1',margin:'0 0 8px'}}>{svc.price}</p>
                           <button
                             onClick={() => {
                               const priceNum = parseInt(svc.price.replace(/[^0-9]/g, ''), 10) || 0;
@@ -4719,27 +4771,16 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                               setNotes(`Услуга: ${svc.title} — ${svc.price}`);
                               setActiveTab('upload');
                             }}
-                            className="mt-1.5 w-full py-2 rounded-xl text-[11px] font-black text-white transition-all cursor-pointer"
-                            style={{background: 'linear-gradient(135deg, #6366f1, #8b5cf6)'}}
-                          >
-                            Заказать →
-                          </button>
+                            style={{
+                              width:'100%', padding:'9px',
+                              background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                              border:'none', borderRadius:'10px',
+                              color:'#fff', fontWeight:700, fontSize:12, cursor:'pointer',
+                            }}
+                          >Заказать →</button>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-            </div>
-
-            <button
-              onClick={() => setActiveTab('upload')}
-              className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm hover:opacity-90 transition-opacity mt-4"
-            >
-              <Printer className="w-4 h-4" />
-              Оформить заказ
-            </button>
-
-          </motion.div>
+                    </motion.div>
           )}
 
 
