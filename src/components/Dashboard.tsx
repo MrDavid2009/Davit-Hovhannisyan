@@ -4780,7 +4780,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                           >Заказать →</button>
                         </div>
                       </div>
-                    </motion.div>
+                    </div>
           )}
 
 
