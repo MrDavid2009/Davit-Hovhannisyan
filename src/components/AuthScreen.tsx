@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { User } from '../types';
-import { Lock, Mail, User as UserIcon, Phone, FileText, ArrowRight, ShieldAlert, CheckCircle, Smartphone, Sparkles } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, Phone, FileText, ArrowRight, ShieldAlert, CheckCircle, Smartphone, Sparkles, Printer } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { signInUserWithFirebase, registerUserWithFirebase } from '../firebaseUtils';
 import { motion } from 'motion/react';
