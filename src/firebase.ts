@@ -11,6 +11,10 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
   type User as FirebaseUser 
 } from 'firebase/auth';
 import { 
@@ -26,8 +30,7 @@ import {
   onSnapshot,
   getDocFromServer,
   addDoc,
-  deleteDoc,
-  increment
+  deleteDoc
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -45,6 +48,10 @@ export const storage = getStorage(app);
 // Expose underlying providers
 export {
   signInWithEmailAndPassword,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
@@ -61,7 +68,6 @@ export {
   getDocFromServer,
   addDoc,
   deleteDoc,
-  increment,
   ref,
   uploadBytes,
   getDownloadURL
