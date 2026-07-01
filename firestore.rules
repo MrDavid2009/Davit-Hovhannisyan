@@ -67,14 +67,13 @@ service cloud.firestore {
       allow delete: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
     }
 
-    // Config collections rules (e.g. analytics tracking counters)
-    match /configs/{configId} {
-      allow read: if true;
-      allow create, update: if configId == 'analytics' && 
-                            request.resource.data.keys().hasAll(['visits', 'history']) &&
-                            request.resource.data.visits is int &&
-                            request.resource.data.history is list;
-      allow delete: if false;
+    // Публичный счётчик посещений сайта — единственный документ, куда
+    // разрешена запись БЕЗ входа в аккаунт (чтобы считать анонимных посетителей).
+    // Читать статистику может только администратор.
+    match /stats/visits {
+      allow read: if isAdmin();
+      allow create, update: if true;
+      allow delete: if isAdmin();
     }
   }
 }
