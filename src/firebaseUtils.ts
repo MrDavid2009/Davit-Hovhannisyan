@@ -21,7 +21,8 @@ import {
   where,
   onSnapshot,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  increment
 } from './firebase';
 import { User, Order, ChatMessage, Notification, DatabaseState } from './types';
 
@@ -319,7 +320,33 @@ export async function updateNotificationInFirebase(alertId: string, updates: Par
 /**
  * Subscribe and keep UI state synced with Firestore in real-time
  */
-export function subscribeToFirebaseCollections(
+/**
+ * Учёт посещений сайта. Работает для АБСОЛЮТНО ВСЕХ посетителей —
+ * не требует входа в аккаунт (правила Firestore разрешают анонимную запись
+ * только в этот конкретный документ stats/visits).
+ * Считает один визит за один сеанс браузера (sessionStorage), чтобы
+ * переходы между страницами внутри сайта не задваивали счётчик.
+ */
+export async function trackSiteVisit(): Promise<void> {
+  try {
+    if (typeof window === 'undefined') return;
+    const alreadyTracked = sessionStorage.getItem('sever18_visit_tracked');
+    if (alreadyTracked) return;
+    sessionStorage.setItem('sever18_visit_tracked', '1');
+
+    const today = new Date().toISOString().split('T')[0];
+    const statsRef = doc(db, 'stats', 'visits');
+    await setDoc(statsRef, {
+      total: increment(1),
+      [`history.${today}`]: increment(1),
+    }, { merge: true });
+  } catch (err) {
+    // Тихо игнорируем — счётчик посещений не должен ломать загрузку сайта
+    console.info('Site visit tracking skipped:', err);
+  }
+}
+
+
   currentUser: User, 
   onSync: (state: Partial<DatabaseState>) => void
 ): () => void {
@@ -394,6 +421,23 @@ export function subscribeToFirebaseCollections(
     handleFirestoreError(err, OperationType.LIST, 'notifications');
   });
   unsubscribes.push(unsubAlerts);
+
+  // 5. Listen to Site Visit Stats (admin only — public writes, admin-only reads)
+  if (isAdminUser) {
+    const unsubStats = onSnapshot(doc(db, 'stats', 'visits'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data() as any;
+        const historyMap: Record<string, number> = data.history || {};
+        const siteVisitsHistory = Object.keys(historyMap)
+          .sort()
+          .map(date => ({ date, count: historyMap[date] }));
+        onSync({ siteVisits: data.total || 0, siteVisitsHistory });
+      }
+    }, (err) => {
+      handleFirestoreError(err, OperationType.GET, 'stats/visits');
+    });
+    unsubscribes.push(unsubStats);
+  }
 
   // Return a master cleanup unsubscriber
   return () => {
