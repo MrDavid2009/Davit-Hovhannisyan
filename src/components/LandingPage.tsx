@@ -61,6 +61,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <button
               onClick={onEnter}
               className="btn-holo-glass flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-slate-900 cursor-pointer"
+              style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 60%, rgba(255,255,255,0.55) 100%)", color: "#0f172a" }}
             >
               Войти в кабинет
               <ArrowRight className="w-3.5 h-3.5" />
@@ -89,6 +90,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <button
               onClick={onEnter}
               className="btn-holo-glass flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold text-slate-900 cursor-pointer"
+              style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 60%, rgba(255,255,255,0.55) 100%)", color: "#0f172a" }}
             >
               <Upload className="w-4 h-4" />
               Загрузить файл
@@ -227,6 +229,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
               href="https://yandex.ru/maps/?text=Раменское%20Северное%20шоссе%2018&rtext=~Раменское%20Северное%20шоссе%2018"
               target="_blank" rel="noopener noreferrer"
               className="btn-holo-glass flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-slate-900 cursor-pointer"
+              style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 60%, rgba(255,255,255,0.55) 100%)", color: "#0f172a" }}
             >
               Построить маршрут
               <ExternalLink className="w-3.5 h-3.5" />
