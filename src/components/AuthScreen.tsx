@@ -252,6 +252,17 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
   return (
     <div id="auth-screen-root" className="min-h-screen flex flex-col justify-center items-center py-14 px-4 sm:px-6 lg:px-8 transition-colors duration-300 relative overflow-hidden select-none" style={isDark ? AUTH_BG_DARK : AUTH_BG_LIGHT}>
 
+      {/* Фоновое видео + затемнение поверх, чтобы текст и шрифты не терялись */}
+      <video
+        src="/auth-bg.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0"
+      />
+      <div className="absolute inset-0 z-0" style={{ background: 'rgba(5, 8, 20, 0.62)' }} />
+
       {/* Floating 3D Frosted Glass Orbs mirroring the uploaded design */}
       <div className="glass-bg-orb w-[180px] h-[180px] top-[12%] left-[6%] opacity-70 animate-[float-slow_16s_infinite_ease-in-out]" style={{ backdropFilter: 'blur(12px) saturate(110%)' }} />
       <div className="glass-bg-orb w-[220px] h-[220px] bottom-[18%] right-[4%] opacity-85 animate-[float-reverse_20s_infinite_ease-in-out]" style={{ backdropFilter: 'blur(16px) saturate(120%)' }} />
