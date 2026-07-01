@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, DatabaseState } from './types';
 import { 
   getInitialDatabase, saveDatabase, 
@@ -13,8 +13,6 @@ import {
 import { AuthScreen } from './components/AuthScreen';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
-import { OnboardingScreen } from './components/OnboardingScreen';
-import { LandingPage } from './components/LandingPage';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, FileText } from 'lucide-react';
 import { auth, onAuthStateChanged } from './firebase';
@@ -24,39 +22,82 @@ import {
   syncLocalUpdatesToFirebase, 
   deleteUserAccountWithFirebase,
   signOutUserWithFirebase,
-  trackSiteVisit
+  handleGoogleRedirectResult,
+  recordSiteVisit
 } from './firebaseUtils';
 
 export default function App() {
-  // Premium splash state for high-end feel
-  const [showSplash, setShowSplash] = useState(true);
-
-  // Onboarding — показываем только новым пользователям (один раз)
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !localStorage.getItem('sever18_onboarded')
-  );
-
-  // Маркетинговая главная страница — показывается гостям до формы входа
-  const [showLanding, setShowLanding] = useState(true);
+  // Splash shows only on first visit — repeat visits go straight to the app
+  const isFirstVisit = !localStorage.getItem('photo_sever_visited');
+  const [showSplash, setShowSplash] = useState(isFirstVisit);
 
   useEffect(() => {
+    if (!isFirstVisit) return;
+    localStorage.setItem('photo_sever_visited', '1');
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2800);
+    }, 1200);
     return () => clearTimeout(timer);
   }, []);
 
-  // Учёт визита на сайт — срабатывает для КАЖДОГО посетителя,
-  // независимо от того, вошёл ли он в аккаунт или зарегистрирован ли вообще
+  // Trigger persistent site visit tracking atomic counter
   useEffect(() => {
-    trackSiteVisit();
+    recordSiteVisit();
   }, []);
 
   // Core user session state
   const [user, setUser] = useState<User | null>(null);
+
+  // Blocker to prevent notifications from firing on the initial Firebase snapshot sync
+  const isInitialSyncRef = useRef(true);
+
+  useEffect(() => {
+    isInitialSyncRef.current = true;
+    const timer = setTimeout(() => {
+      isInitialSyncRef.current = false;
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [user]);
   
   // Storage database state (defaults to offline structure before Firebase sync)
   const [database, setDatabase] = useState<DatabaseState>(() => getInitialDatabase());
+
+  // Handle Google redirect result after page reload
+  useEffect(() => {
+    handleGoogleRedirectResult().then((googleUser) => {
+      if (googleUser) {
+        setUser(googleUser);
+        saveCurrentUser(googleUser);
+      }
+    }).catch(() => {});
+  }, []);
+
+  // Handle Telegram redirect result after page reload
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tgId = params.get('id');
+    const tgHash = params.get('hash');
+    if (!tgId || !tgHash) return;
+
+    // Clean URL
+    window.history.replaceState({}, '', window.location.pathname);
+
+    const tgFirst = params.get('first_name') || '';
+    const tgLast = params.get('last_name') || '';
+    const tgName = [tgFirst, tgLast].filter(Boolean).join(' ') || params.get('username') || 'Клиент';
+    const tgEmail = `tg_${tgId}@photosever.telegram`;
+    const tgPassword = `TG_${tgId}_8509070324`;
+
+    import('./firebaseUtils').then(({ signInUserWithFirebase, registerUserWithFirebase }) => {
+      signInUserWithFirebase(tgEmail, tgPassword)
+        .then(u => { setUser(u); saveCurrentUser(u); })
+        .catch(() => {
+          registerUserWithFirebase(tgEmail, tgPassword, tgName, '')
+            .then(u => { setUser(u); saveCurrentUser(u); })
+            .catch(console.error);
+        });
+    });
+  }, []);
 
   // Restore and keep authentication session synced in real-time
   useEffect(() => {
@@ -91,7 +132,7 @@ export default function App() {
     const unsubscribeCollection = subscribeToFirebaseCollections(user, (syncedUpdates) => {
       setDatabase((prev) => {
         // 1. Check for incoming new chat messages
-        if (syncedUpdates.chatMessages && prev.chatMessages && prev.chatMessages.length > 0) {
+        if (syncedUpdates.chatMessages && prev.chatMessages && prev.chatMessages.length > 0 && !isInitialSyncRef.current) {
           const newMsgs = syncedUpdates.chatMessages.filter(
             m => !prev.chatMessages.some(pm => pm.id === m.id)
           );
@@ -109,7 +150,7 @@ export default function App() {
         }
 
         // 2. Check for order status readiness updates
-        if (syncedUpdates.orders && prev.orders && prev.orders.length > 0) {
+        if (syncedUpdates.orders && prev.orders && prev.orders.length > 0 && !isInitialSyncRef.current) {
           syncedUpdates.orders.forEach(updatedOrder => {
             const prevOrder = prev.orders.find(po => po.id === updatedOrder.id);
             if (prevOrder && prevOrder.status !== updatedOrder.status) {
@@ -210,7 +251,8 @@ export default function App() {
               y: -25, 
               transition: { duration: 0.55, ease: [0.16, 1, 0.3, 1] } 
             }}
-            className="fixed inset-0 z-50 flex flex-col justify-between p-8 bg-[#02050f] text-white overflow-hidden select-none"
+            onClick={() => setShowSplash(false)}
+            className="fixed inset-0 z-50 flex flex-col justify-between p-8 bg-[#02050f] text-white overflow-hidden select-none cursor-pointer"
           >
             {/* Ambient luxury rotating glow clouds in corners */}
             <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-indigo-600/15 blur-[120px] animate-glow-slow-1 pointer-events-none" />
@@ -282,7 +324,7 @@ export default function App() {
                 </h1>
                 
                 <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-indigo-300 font-bold">
-                  студия премиальной печати &middot; hq
+                  студия печати &middot; hq
                 </p>
               </motion.div>
 
@@ -322,13 +364,9 @@ export default function App() {
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="min-h-screen"
           >
-            {!user && showLanding ? (
-              <LandingPage onEnter={() => setShowLanding(false)} />
-            ) : !user && showOnboarding ? (
-              <OnboardingScreen onDone={() => setShowOnboarding(false)} />
-            ) : !user ? (
-              <AuthScreen
-                onAuthSuccess={handleAuthSuccess}
+            {!user ? (
+              <AuthScreen 
+                onAuthSuccess={handleAuthSuccess} 
                 allUsers={database.users}
                 onRegisterUser={handleRegisterUser}
               />
