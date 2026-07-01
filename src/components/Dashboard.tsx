@@ -1276,6 +1276,26 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
     setChatInput('');
   };
 
+  // Отправка стикера клиентом — уходит сразу же по клику
+  const handleSendSticker = (sticker: { src: string; label: string }) => {
+    const fullUrl = window.location.origin + sticker.src;
+    const newMsg: ChatMessage = {
+      id: 'c_sticker_' + Date.now(),
+      userId: user.id,
+      senderId: user.id,
+      senderRole: 'client',
+      senderName: user.fullName,
+      message: '[STICKER]:' + fullUrl,
+      timestamp: new Date().toISOString(),
+      readByAdmin: false,
+      readByClient: true
+    };
+
+    onUpdateDatabase({
+      chatMessages: [...database.chatMessages, newMsg]
+    });
+  };
+
   const handleRequestPushPermission = () => {
     if ('Notification' in window) {
       window.Notification.requestPermission().then(status => {
@@ -2792,6 +2812,11 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                               </span>
                             )}
                           </span>
+                          {msg.message.startsWith('[STICKER]:') ? (
+                            <div className="msg-sticker">
+                              <img src={msg.message.substring(10)} className="msg-sticker__img" alt="Стикер" />
+                            </div>
+                          ) : (
                           <div
                             className={`p-3.5 rounded-2xl text-xs leading-relaxed font-medium shadow-sm border ${
                               isAdmin
@@ -2812,6 +2837,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                               msg.message
                             )}
                           </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -2833,7 +2859,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   </button>
                   {showEmojiPicker && (
                     <EmojiPicker
-                      onSelect={(emoji) => setChatInput(prev => prev + emoji)}
+                      onSelect={(sticker) => handleSendSticker(sticker)}
                       onClose={() => setShowEmojiPicker(false)}
                     />
                   )}
