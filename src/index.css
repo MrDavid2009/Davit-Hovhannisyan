@@ -2090,3 +2090,31 @@ button:hover .glass-icon-capsule {
 .btn-holo-glass:active {
   transform: translateY(0);
 }
+
+/* ============================================
+   ГЛОБАЛЬНЫЕ СТЕКЛЯННЫЕ КНОПКИ — админка и кабинет клиента
+   (тот же голографический стиль, что и на экране входа)
+   ============================================ */
+button.glass-card,
+.filter-pill-btn.active,
+.glass-pill-active {
+  position: relative;
+  isolation: isolate;
+}
+button.glass-card::after,
+.filter-pill-btn.active::after,
+.glass-pill-active::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(90deg, #7dd3fc, #f0abfc, #fda4af, #fdba74, #a7f3d0, #7dd3fc);
+  background-size: 300% 100%;
+  animation: holo-border-shift 5s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
+}
