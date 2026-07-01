@@ -976,7 +976,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             onClick={() => setActiveTab('orders')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial relative ${
               activeTab === 'orders' 
-                ? 'bg-white/10 text-white font-black' 
+                ? 'nav-holo-active bg-white/10 text-white font-black' 
                 : 'text-white/55 hover:bg-white/5 hover:text-white'
             }`}
           >
@@ -995,7 +995,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             onClick={() => setActiveTab('chat')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial relative ${
               activeTab === 'chat' 
-                ? 'bg-white/10 text-white font-black' 
+                ? 'nav-holo-active bg-white/10 text-white font-black' 
                 : 'text-white/55 hover:bg-white/5 hover:text-white'
             }`}
           >
@@ -1014,7 +1014,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             onClick={() => setActiveTab('users')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial ${
               activeTab === 'users' 
-                ? 'bg-white/10 text-white font-black' 
+                ? 'nav-holo-active bg-white/10 text-white font-black' 
                 : 'text-white/55 hover:bg-white/5 hover:text-white'
             }`}
           >
@@ -1028,7 +1028,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             onClick={() => setActiveTab('analytics')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial ${
               activeTab === 'analytics' 
-                ? 'bg-white/10 text-white font-black' 
+                ? 'nav-holo-active bg-white/10 text-white font-black' 
                 : 'text-white/55 hover:bg-white/5 hover:text-white'
             }`}
           >
@@ -1042,7 +1042,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             onClick={() => setActiveTab('settings')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial ${
               activeTab === 'settings' 
-                ? 'bg-white/10 text-white font-black' 
+                ? 'nav-holo-active bg-white/10 text-white font-black' 
                 : 'text-white/55 hover:bg-white/5 hover:text-white'
             }`}
           >
@@ -1056,7 +1056,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             onClick={() => setActiveTab('archive')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial ${
               activeTab === 'archive'
-                ? 'bg-white/10 text-white font-black'
+                ? 'nav-holo-active bg-white/10 text-white font-black'
                 : 'text-white/55 hover:bg-white/5 hover:text-white'
             }`}
           >
