@@ -101,4 +101,6 @@ export interface DatabaseState {
   chatMessages: ChatMessage[];
   notifications: Notification[];
   paymentConfig?: PaymentConfig;
+  siteVisits?: number;
+  siteVisitsHistory?: { date: string; count: number }[];
 }
