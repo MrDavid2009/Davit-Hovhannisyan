@@ -21,8 +21,9 @@ export interface User {
   promoDiscount?: number;
   promoGiftedSeen?: boolean;
   promoExpiresAt?: string;
-  telegramNotificationsEnabled?: boolean;
+  telegramChatId?: string;
   telegramUsername?: string;
+  telegramNotificationsEnabled?: boolean;
 }
 
 export type FileFormatGroup = 'archive' | 'image' | 'document' | 'other';
@@ -38,6 +39,11 @@ export interface PrintFile {
   pageCount?: number;
   url?: string; // File download URL from Firebase Storage
   previewUrl?: string;
+  paperType?: string;
+  printColor?: string;
+  fileCopies?: number;
+  photoSize?: string;
+  colorFillPercent?: number;
 }
 
 export type OrderStatus = 'pending' | 'approved' | 'printing' | 'ready' | 'printed';
@@ -65,8 +71,7 @@ export interface Order {
   binding?: 'none' | 'staple' | 'file' | 'spring_plastic' | 'spring_metal' | 'hard_cover';
   promoCode?: string;
   promoDiscount?: number;
-  rating?: 1 | 2 | 3 | 4 | 5;
-  ratingComment?: string;
+  rating?: number;
 }
 
 export interface ChatMessage {
@@ -91,6 +96,18 @@ export interface Notification {
   type: 'order_status' | 'chat' | 'payment' | 'profile';
 }
 
+export interface Service {
+  id: string;
+  title: string;
+  description: string;
+  price: string;
+  emoji: string;
+  category: string;
+  isActive: boolean;
+  order: number;
+  imageUrl?: string;
+}
+
 export interface PaymentConfig {
   bankId: string;
   merchantId: string;
@@ -113,4 +130,5 @@ export interface DatabaseState {
   paymentConfig?: PaymentConfig;
   siteVisits?: number;
   siteVisitsHistory?: { date: string; count: number }[];
+  services?: Service[];
 }
