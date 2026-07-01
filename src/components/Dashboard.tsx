@@ -1359,7 +1359,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'upload' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                className="absolute inset-0 rounded-2xl -z-10 nav-holo-pill" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -1383,7 +1383,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'orders' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                className="absolute inset-0 rounded-2xl -z-10 nav-holo-pill" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -1410,7 +1410,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'chat' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                className="absolute inset-0 rounded-2xl -z-10 nav-holo-pill" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -1436,7 +1436,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'profile' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                className="absolute inset-0 rounded-2xl -z-10 nav-holo-pill" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -1465,7 +1465,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'contacts' && (
               <motion.div 
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                className="absolute inset-0 rounded-2xl -z-10 nav-holo-pill" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
@@ -1486,7 +1486,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             {activeTab === 'services' && (
               <motion.div
                 layoutId="active-sidebar-pill"
-                className="absolute inset-0 rounded-2xl -z-10" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
+                className="absolute inset-0 rounded-2xl -z-10 nav-holo-pill" style={{background:"rgba(255,255,255,0.14)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.25)",boxShadow:"inset 0 1px 0 rgba(255,255,255,0.3), 0 4px 16px rgba(0,0,0,0.15)"}}
                 transition={{ type: 'spring', stiffness: 380, damping: 30 }}
               />
             )}
