@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
-import { Lock, Mail, User as UserIcon, Phone, FileText, ArrowRight, ShieldAlert, CheckCircle, Smartphone, Sparkles, Printer } from 'lucide-react';
+import { Lock, Mail, User as UserIcon, Phone, ArrowRight, ShieldAlert, CheckCircle, Printer } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
 import { signInUserWithFirebase, registerUserWithFirebase } from '../firebaseUtils';
 import { motion } from 'motion/react';
@@ -56,6 +56,24 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
+  }, []);
+
+  // Вращающееся неоновое кольцо вокруг логотипа (как у кнопки переключения темы)
+  const avatarGlowRef = useRef<HTMLDivElement>(null);
+  const avatarLineRef = useRef<HTMLDivElement>(null);
+  const avatarAngleRef = useRef(0);
+  const avatarRafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const spin = () => {
+      avatarAngleRef.current += 1.1;
+      const deg = `${avatarAngleRef.current}deg`;
+      if (avatarGlowRef.current) avatarGlowRef.current.style.setProperty('--ag', deg);
+      if (avatarLineRef.current) avatarLineRef.current.style.setProperty('--al', deg);
+      avatarRafRef.current = requestAnimationFrame(spin);
+    };
+    avatarRafRef.current = requestAnimationFrame(spin);
+    return () => cancelAnimationFrame(avatarRafRef.current);
   }, []);
 
   const resetMessages = () => {
@@ -248,15 +266,32 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
       {/* Main card column */}
       <div className="w-full max-w-sm relative z-10 flex flex-col items-center">
 
-        {/* Floating circular avatar/logo, overlapping the card */}
+        {/* Floating circular avatar/logo, overlapping the card, with rotating neon ring like the theme toggle */}
         <div className="relative z-20 -mb-12">
-          <div className="w-24 h-24 rounded-full bg-white/95 dark:bg-white/10 backdrop-blur-md border-4 border-white/90 dark:border-white/15 shadow-2xl flex items-center justify-center">
-            <div className="squircle-3d-tile tile-3d-orange w-16 h-16 !rounded-full flex items-center justify-center scale-100 shadow-md">
-              <FileText className="w-8 h-8 text-white icon-3d-svg" />
-            </div>
-          </div>
-          <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0b1530] flex items-center justify-center shadow-md">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
+          <div
+            ref={avatarGlowRef}
+            className="absolute -inset-2.5 rounded-full pointer-events-none"
+            style={{
+              background: isDark
+                ? 'conic-gradient(from var(--ag,0deg), transparent 0deg, rgba(180,100,255,0.85) 60deg, rgba(255,255,255,0.95) 90deg, rgba(180,100,255,0.85) 120deg, transparent 180deg, transparent 360deg)'
+                : 'conic-gradient(from var(--ag,0deg), transparent 0deg, rgba(147,197,253,0.9) 60deg, rgba(255,255,255,1) 90deg, rgba(147,197,253,0.9) 120deg, transparent 180deg, transparent 360deg)',
+              filter: 'blur(6px)',
+              opacity: 0.85,
+            }}
+          />
+          <div
+            ref={avatarLineRef}
+            className="absolute inset-0 rounded-full pointer-events-none"
+            style={{
+              background: isDark
+                ? 'conic-gradient(from var(--al,0deg), transparent 0deg, transparent 40deg, rgba(220,150,255,0.9) 60deg, rgba(255,255,255,1) 75deg, rgba(220,150,255,0.9) 90deg, transparent 110deg, transparent 360deg)'
+                : 'conic-gradient(from var(--al,0deg), transparent 0deg, transparent 40deg, rgba(147,197,253,0.9) 60deg, rgba(255,255,255,1) 75deg, rgba(147,197,253,0.9) 90deg, transparent 110deg, transparent 360deg)',
+              WebkitMask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), white calc(100% - 2px))',
+              mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), white calc(100% - 2px))',
+            }}
+          />
+          <div className="relative w-24 h-24 rounded-full bg-white/95 dark:bg-white/10 backdrop-blur-md border-4 border-white/90 dark:border-white/15 shadow-2xl flex items-center justify-center overflow-hidden">
+            <img src="/logo-192-v2.png" alt="Фото-Север" className="w-14 h-14 object-contain rounded-full" />
           </div>
         </div>
 
@@ -266,12 +301,11 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
           <h1 className="text-base font-black text-slate-900 dark:text-white leading-none font-display uppercase tracking-tight">Фото-Север</h1>
           <p className="mt-1.5 text-[11px] italic text-slate-500 dark:text-slate-300 font-medium">«Печать фотографий, документов и чертежей за минуты»</p>
 
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-100/60 dark:border-emerald-900/30 text-[9px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-wider mt-3 mb-5">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/25 dark:bg-white/8 border border-white/40 dark:border-white/15 text-[9px] text-slate-700 dark:text-slate-200 font-black uppercase tracking-wider mt-3 mb-5 backdrop-blur-sm">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
             </span>
-            <Printer className="w-3 h-3 text-emerald-500" />
+            <Printer className="w-3 h-3" />
             Принимаем заказы онлайн
           </div>
 
@@ -296,8 +330,8 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
             )}
 
             {successMsg && (
-              <div className="mb-5 bg-emerald-500/10 text-emerald-800 dark:text-emerald-450 p-3.5 rounded-2xl flex items-start gap-2.5 border border-emerald-500/20 text-xs font-semibold backdrop-blur-md">
-                <CheckCircle className="w-4.5 h-4.5 shrink-0 text-emerald-500" />
+              <div className="mb-5 bg-blue-500/10 text-blue-800 dark:text-blue-300 p-3.5 rounded-2xl flex items-start gap-2.5 border border-blue-500/20 text-xs font-semibold backdrop-blur-md">
+                <CheckCircle className="w-4.5 h-4.5 shrink-0 text-blue-500" />
                 <span>{successMsg}</span>
               </div>
             )}
