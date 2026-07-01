@@ -11,7 +11,7 @@ import {
   FileText, Users, Clock, MessageSquare, Download, CheckCircle, 
   Send, RefreshCw, BarChart3, Trash2, Edit3, Save, FileSpreadsheet, 
   Printer, ArrowRight, TrendingUp, DollarSign, Files, Eye, HelpCircle,
-  BellRing, LogOut, FileCheck, Settings, Camera, Image as ImageIcon, Key, CreditCard, Check, ShieldAlert, X, ShieldCheck, Gift, Search, Archive
+  BellRing, LogOut, FileCheck, Settings, Camera, Image as ImageIcon, Key, CreditCard, Check, ShieldAlert, X, ShieldCheck, Gift, Search, Archive, ChevronLeft
 } from 'lucide-react';
 import { 
   formatFileSize, formatDateTime, getStatusLabel, 
@@ -908,6 +908,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
   });
 
   const activeTalkingChat = database.chatMessages.filter(c => c.userId === activeChatUserId);
+  const activeChatClient = clientsOnly.find(u => u.id === activeChatUserId);
 
   return (
     <div id="admin-dashboard-root" className="liquid-glass-bg h-screen text-slate-800 dark:text-slate-100 flex flex-col md:flex-row transition-colors duration-300 relative">
@@ -1462,7 +1463,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 glass-panel rounded-3xl overflow-hidden" style={{ height: '600px' }}>
               
               {/* Clients sidebar list */}
-              <div className="md:col-span-4 border-r border-slate-150 dark:border-slate-800 flex flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10">
+              <div className={`md:col-span-4 border-r border-slate-150 dark:border-slate-800 flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10 ${activeChatUserId ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
                   <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Кабинеты Пользователей ({clientsOnly.length})</span>
                 </div>
@@ -1477,7 +1478,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                         className={`w-full p-4 text-left flex items-start gap-3 transition-colors ${
                           isSelected 
                             ? 'bg-indigo-50/45 dark:bg-slate-800/50' 
-                            : 'hover:bg-slate-100/50 dark:hover:bg-slate-850/40'
+                            : session.unreadCount > 0 ? 'chat-card-blink' : 'hover:bg-slate-100/50 dark:hover:bg-slate-850/40'
                         }`}
                       >
                         <div className="relative shrink-0">
@@ -1493,7 +1494,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                           <div className="flex justify-between items-baseline">
                             <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">{session.client.fullName}</h4>
                             {session.unreadCount > 0 && (
-                              <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0">
+                              <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 animate-pulse">
                                 {session.unreadCount}
                               </span>
                             )}
@@ -1516,25 +1517,32 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
               </div>
 
               {/* Active Conversation screen */}
-              <div className="md:col-span-8 flex flex-col h-full min-h-0 bg-transparent">
+              <div className={`md:col-span-8 flex-col h-full min-h-0 bg-transparent ${activeChatUserId ? 'flex' : 'hidden md:flex'}`}>
                 {activeChatUserId ? (
                   <>
                     {/* Header info */}
                     <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-between">
                       <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setActiveChatUserId(null)}
+                          className="md:hidden shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-150 dark:hover:bg-slate-800 cursor-pointer"
+                          title="Назад к списку"
+                        >
+                          <ChevronLeft className="w-5 h-5" />
+                        </button>
                         <div className="relative shrink-0">
                           <UserAvatar
-                            user={clientsOnly.find(u => u.id === activeChatUserId)}
+                            user={activeChatClient}
                             className="w-8 h-8 rounded-lg"
                           />
-                          {clientsOnly.find(u => u.id === activeChatUserId)?.isOnline && (
+                          {activeChatClient?.isOnline && (
                             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
                           )}
                         </div>
                         <div>
                           <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight flex items-center gap-1.5">
-                            Диалог с {clientsOnly.find(u => u.id === activeChatUserId)?.fullName}
-                            {clientsOnly.find(u => u.id === activeChatUserId)?.isOnline && (
+                            Диалог с {activeChatClient?.fullName}
+                            {activeChatClient?.isOnline && (
                               <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-450 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -1542,8 +1550,8 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                             )}
                           </h4>
                           <span className="text-[9px] font-medium text-slate-400 block mt-0.5">
-                            Email: {clientsOnly.find(u => u.id === activeChatUserId)?.email} &bull; {
-                              clientsOnly.find(u => u.id === activeChatUserId)?.isOnline 
+                            Email: {activeChatClient?.email} &bull; {
+                              activeChatClient?.isOnline 
                                 ? <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider text-[8px]">В сети</span>
                                 : <span className="text-[8px] uppercase font-semibold">Не в сети</span>
                             }
@@ -1576,12 +1584,19 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                           return (
                             <div
                               key={msg.id}
-                              className={`group flex gap-3 max-w-[85%] items-center ${isAdmin ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+                              className={`group flex gap-2.5 max-w-[85%] items-end ${isAdmin ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
                             >
+                              {isAdmin ? (
+                                <div className="w-7 h-7 rounded-full shrink-0 mb-1 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
+                                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                                </div>
+                              ) : (
+                                <UserAvatar user={activeChatClient} className="w-7 h-7 rounded-full shrink-0 mb-1" />
+                              )}
                               <button
                                 onClick={() => handleDeleteMessage(msg.id)}
                                 title="Удалить сообщение"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 flex items-center justify-center cursor-pointer"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 flex items-center justify-center cursor-pointer mb-1"
                               >
                                 <Trash2 className="w-3 h-3" />
                               </button>
