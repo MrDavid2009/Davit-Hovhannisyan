@@ -1457,209 +1457,86 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             </div>
           )}
 
-          {/* TAB 2: OPERATOR CHAT CHANNELS PANEL */}
+          {/* TAB 2: OPERATOR CHAT CHANNELS PANEL — 1:1 по коду Grok */}
           {activeTab === 'chat' && (
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 glass-panel rounded-3xl overflow-hidden" style={{ height: '600px' }}>
-              
-              {/* Clients sidebar list */}
-              <div className="col-span-12 border-r border-slate-150 dark:border-slate-800 flex flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10">
-                <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
-                  <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Кабинеты Пользователей ({clientsOnly.length})</span>
-                </div>
-
-                <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5" style={{ background: '#eef2f7' }}>
+            <div className={`grok-chat-app ${activeChatUserId ? 'chat-open' : ''}`}>
+              <aside className="grok-sidebar grok-glass">
+                <div className="grok-sidebar-header">Чаты ({clientsOnly.length})</div>
+                <div className="grok-chat-list">
                   {chatSessions.map(session => {
                     const isSelected = session.client.id === activeChatUserId;
-                    const hasMsg = !!session.lastMsg;
                     const preview = session.lastMsg
                       ? (session.lastMsg.message.startsWith('[IMAGE]:') ? '📷 Фото' : session.lastMsg.message)
                       : 'Нет сообщений';
                     return (
-                      <button
+                      <div
                         key={session.client.id}
+                        className={`grok-chat-item ${isSelected ? 'active' : ''} ${session.unreadCount > 0 ? 'chat-card-blink' : ''}`}
                         onClick={() => { setActiveChatUserId(session.client.id); setShowClientInfoPanel(false); }}
-                        className={`chat-list-card w-full text-left rounded-2xl p-3 transition-all shadow-sm hover:shadow-md block ${
-                          isSelected ? 'ring-2 ring-indigo-400' : ''
-                        } ${session.unreadCount > 0 ? 'chat-card-blink' : ''}`}
                       >
-                        <div className="flex items-center gap-2 mb-1 relative z-20">
-                          <div className="relative shrink-0 -mb-4">
-                            <UserAvatar
-                              user={session.client}
-                              className="w-10 h-10 rounded-full ring-[3px] ring-white shadow-lg"
-                            />
-                            {session.client.isOnline && (
-                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" title="Онлайн" />
-                            )}
-                          </div>
-                          <h4 className="text-[13px] font-black text-slate-800 truncate">{session.client.fullName}</h4>
-                          {session.unreadCount > 0 && (
-                            <span className="bg-rose-500 text-white text-[9px] font-black w-5 h-5 rounded-full shrink-0 flex items-center justify-center animate-pulse">
-                              {session.unreadCount}
-                            </span>
-                          )}
-                          {session.lastMsg && (
-                            <span className="text-[10px] text-slate-400 italic shrink-0 font-medium ml-auto">
-                              {new Date(session.lastMsg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          )}
-                        </div>
-
-                        <div
-                          className={`chat-list-bubble ${hasMsg ? 'chat-list-bubble-filled' : 'chat-list-bubble-empty'} relative z-10 pl-14 pr-4 pt-3 pb-2.5 text-[12px] font-semibold leading-snug`}
-                          style={{
-                            borderTopLeftRadius: '34px',
-                            borderTopRightRadius: '18px',
-                            borderBottomLeftRadius: '18px',
-                            borderBottomRightRadius: '18px',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical' as any,
-                            overflow: 'hidden'
-                          }}
+                        <button
+                          type="button"
+                          className="grok-avatar-btn grok-avatar-sm"
+                          onClick={(e) => { e.stopPropagation(); setActiveChatUserId(session.client.id); setShowClientInfoPanel(true); }}
+                          title="Открыть профиль"
                         >
-                          {preview}
+                          <UserAvatar user={session.client} className="w-full h-full rounded-full" />
+                        </button>
+                        <div className="grok-chat-item-text">
+                          <div className="grok-chat-item-name">{session.client.fullName}</div>
+                          <div className="grok-chat-item-preview">{preview}</div>
                         </div>
-                      </button>
+                        {session.unreadCount > 0 && (
+                          <span className="grok-unread-badge">{session.unreadCount}</span>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
-              </div>
+              </aside>
 
-              {/* Active Conversation screen — выезжает справа поверх списка, список остаётся виден */}
-              {activeChatUserId && (
-                <>
-                  <div
-                    onClick={() => { setActiveChatUserId(null); setShowClientInfoPanel(false); }}
-                    className="fixed inset-0 bg-black/30 z-40 animate-[fadeIn_0.2s_ease]"
-                  />
-                  <div className="fixed top-0 right-0 h-full w-full sm:w-[600px] z-50 bg-white dark:bg-slate-950 shadow-2xl flex flex-col animate-[slideInRight_0.25s_ease] rounded-none sm:rounded-l-3xl overflow-hidden">
+              <main className="grok-main">
+                {activeChatUserId && activeChatClient ? (
                   <>
-                    {/* Header info */}
-                    <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <button
-                          onClick={() => { setActiveChatUserId(null); setShowClientInfoPanel(false); }}
-                          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-150 dark:hover:bg-slate-800 cursor-pointer"
-                          title="Назад к списку"
-                        >
-                          <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => setShowClientInfoPanel(true)}
-                          className="flex items-center gap-3 cursor-pointer group -ml-1 pl-1 pr-2 py-1 rounded-xl hover:bg-slate-150/60 dark:hover:bg-slate-800/50 transition-colors"
-                          title="Информация о клиенте"
-                        >
-                          <div className="relative shrink-0">
-                            <UserAvatar
-                              user={activeChatClient}
-                              className="w-8 h-8 rounded-lg"
-                            />
-                            {activeChatClient?.isOnline && (
-                              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
-                            )}
-                          </div>
-                          <div className="text-left">
-                            <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight flex items-center gap-1.5">
-                              {activeChatClient?.fullName}
-                              {activeChatClient?.isOnline && (
-                                <span className="relative flex h-2 w-2">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-450 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                              )}
-                            </h4>
-                            <span className="text-[9px] font-medium text-slate-400 block mt-0.5 group-hover:text-indigo-500 transition-colors">
-                              {
-                                activeChatClient?.isOnline 
-                                  ? <span className="text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider text-[8px]">В сети</span>
-                                  : <span className="text-[8px] uppercase font-semibold">Не в сети</span>
-                              } &bull; нажмите для информации
-                            </span>
-                          </div>
-                        </button>
+                    <header className="grok-thread-header grok-glass">
+                      <button type="button" className="grok-back-btn" onClick={() => { setActiveChatUserId(null); setShowClientInfoPanel(false); }} title="Назад">
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <button type="button" className="grok-avatar-btn" onClick={() => setShowClientInfoPanel(true)} title="Открыть профиль">
+                        <UserAvatar user={activeChatClient} className="w-full h-full rounded-full" />
+                      </button>
+                      <div className="grok-thread-title" onClick={() => setShowClientInfoPanel(true)} style={{ cursor: 'pointer' }}>
+                        <h1>{activeChatClient.fullName}</h1>
+                        <p>{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</p>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => handleClearChatHistory(activeChatUserId)}
+                        className="grok-header-icon-btn"
+                        title="Очистить историю переписки"
+                      >
+                        <Trash2 className="w-4.5 h-4.5" />
+                      </button>
+                    </header>
 
-                      <div className="flex items-center gap-2">
-                        <div className="text-[10px] text-indigo-650 bg-indigo-50 dark:bg-[#1a1c2e] dark:text-indigo-400 px-2.5 py-1 rounded-md font-bold">
-                          Заказы: {database.orders.filter(o => o.userId === activeChatUserId).length} шт.
-                        </div>
-                        <button
-                          onClick={() => handleClearChatHistory(activeChatUserId)}
-                          title="Очистить историю переписки"
-                          className="text-[10px] text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer flex items-center gap-1"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Очистить
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Message Logs */}
-                    <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-5" style={{ background: '#eef2f7' }}>
+                    <div className="grok-messages">
                       {activeTalkingChat.length === 0 ? (
-                        <p className="text-xs text-slate-400 text-center py-10 mt-10">Нет сообщений в этой ветке.</p>
+                        <p className="grok-empty-hint">Нет сообщений в этой ветке.</p>
                       ) : (
                         activeTalkingChat.map(msg => {
                           const isAdmin = msg.senderRole === 'admin';
                           return (
-                            <div
-                              key={msg.id}
-                              className={`group flex items-start gap-2.5 ${isAdmin ? 'flex-row-reverse' : ''}`}
-                            >
-                              {isAdmin ? (
-                                <div className="w-9 h-9 rounded-full shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md ring-2 ring-white">
-                                  <ShieldCheck className="w-4 h-4 text-white" />
-                                </div>
-                              ) : (
-                                <UserAvatar user={activeChatClient} className="w-9 h-9 rounded-full shrink-0 shadow-md ring-2 ring-white" />
+                            <div key={msg.id} className={`grok-msg-row ${isAdmin ? 'out' : ''}`}>
+                              {!isAdmin && (
+                                <UserAvatar user={activeChatClient} className="grok-avatar-btn grok-avatar-msg" />
                               )}
-
-                              <div className={`flex-1 min-w-0 max-w-[78%] ${isAdmin ? 'flex flex-col items-end' : ''}`}>
-                                <div className={`flex items-baseline gap-2 px-1 mb-1 ${isAdmin ? 'flex-row-reverse' : ''}`}>
-                                  <span className="text-[13px] font-black text-slate-800">{msg.senderName}</span>
-                                  <span className="text-[10px] text-slate-450 italic">
-                                    {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                  {isAdmin && (
-                                    <span className="inline-flex items-center" title={msg.readByClient ? "Прочитано" : "Доставлено"}>
-                                      {msg.readByClient ? (
-                                        <span className="text-blue-500 flex items-center relative w-4.5 h-3">
-                                          <svg className="w-3 h-3 absolute left-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                          </svg>
-                                          <svg className="w-3 h-3 absolute left-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                          </svg>
-                                        </span>
-                                      ) : (
-                                        <span className="text-slate-400 flex items-center w-3 h-3">
-                                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                          </svg>
-                                        </span>
-                                      )}
-                                    </span>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteMessage(msg.id)}
-                                    title="Удалить сообщение"
-                                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-5 h-5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center cursor-pointer"
-                                  >
-                                    <Trash2 className="w-3 h-3" />
-                                  </button>
-                                </div>
-
-                                <div
-                                  className={`chat-bubble-${isAdmin ? 'admin' : 'client'} inline-block p-3 rounded-2xl text-[13px] font-medium shadow-sm ${
-                                    isAdmin ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                                  }`}
-                                >
+                              <div>
+                                <div className="grok-msg-bubble">
                                   {msg.message.startsWith('[IMAGE]:') ? (
-                                    <div className="space-y-1 my-0.5 text-left">
+                                    <div className="space-y-1 text-left">
                                       <img
                                         src={msg.message.substring(8)}
-                                        className="rounded-xl max-w-[200px] sm:max-w-xs cursor-pointer hover:opacity-90 shadow-sm"
+                                        className="rounded-xl max-w-[200px] sm:max-w-xs cursor-pointer hover:opacity-90"
                                         alt="Пример готового продукта"
                                         onClick={() => {
                                           const imgWin = window.open('', '_blank');
@@ -1668,11 +1545,21 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                                           }
                                         }}
                                       />
-                                      <span className="text-[9px] opacity-80 block italic">Защищено водяным знаком &bull; ПРИМЕР</span>
+                                      <span className="text-[10px] opacity-70 block italic">Защищено водяным знаком &bull; ПРИМЕР</span>
                                     </div>
-                                  ) : (
-                                    msg.message
-                                  )}
+                                  ) : msg.message}
+                                </div>
+                                <div className="grok-msg-time">
+                                  {msg.senderName} &bull; {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                                  {isAdmin && (msg.readByClient ? ' ✓✓' : ' ✓')}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteMessage(msg.id)}
+                                    title="Удалить сообщение"
+                                    className="grok-msg-delete"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
                                 </div>
                               </div>
                             </div>
@@ -1682,37 +1569,34 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       <div ref={chatBottomRef} />
                     </div>
 
-                    {/* Message Input box */}
-                    <form onSubmit={handleAdminSendMessage} className="p-4 border-t border-white/10 bg-transparent flex gap-2 items-center">
-                      <input 
-                        type="file" 
-                        id="admin-chat-attachment" 
-                        accept="image/*" 
-                        onChange={(e) => { 
-                          const f = e.target.files?.[0]; 
-                          if (f) watermarkAndSendImage(f); 
-                          e.target.value = ""; 
-                        }} 
-                        className="hidden" 
+                    <form onSubmit={handleAdminSendMessage} className="grok-composer grok-glass">
+                      <input
+                        type="file"
+                        id="admin-chat-attachment"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) watermarkAndSendImage(f);
+                          e.target.value = "";
+                        }}
+                        className="hidden"
                       />
-                      
-                      <button 
-                        type="button" 
-                        onClick={() => document.getElementById('admin-chat-attachment')?.click()} 
-                        className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 font-bold p-3 rounded-xl transition flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-750" 
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById('admin-chat-attachment')?.click()}
+                        className="grok-composer-icon-btn"
                         title="Отправить готовый пример товара с водяным знаком 'ПРИМЕР'"
                       >
-                        <ImageIcon className="w-4 h-4 text-slate-600 dark:text-slate-300 shrink-0" />
+                        📎
                       </button>
-
-                      <div className="relative shrink-0">
+                      <div className="relative">
                         <button
                           type="button"
                           onClick={() => setShowEmojiPicker(v => !v)}
-                          className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 font-bold p-3 rounded-xl transition flex items-center justify-center border border-slate-200 dark:border-slate-750"
+                          className="grok-composer-icon-btn"
                           title="Эмодзи"
                         >
-                          <span className="text-base leading-none">😊</span>
+                          😊
                         </button>
                         {showEmojiPicker && (
                           <EmojiPicker
@@ -1721,127 +1605,56 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                           />
                         )}
                       </div>
-
                       <input
                         type="text"
                         value={adminChatInput}
                         onChange={e => setAdminChatInput(e.target.value)}
                         placeholder="Напишите ответ клиенту (файлы приняты, печатаю...)"
-                        className="flex-1 bg-slate-50 dark:bg-slate-950 text-xs text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        className="grok-composer-input"
                       />
-                      <button
-                        type="submit"
-                        disabled={!adminChatInput.trim()}
-                        className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 disabled:dark:bg-slate-805 text-white py-3 px-4 rounded-xl font-bold transition flex items-center justify-center shrink-0"
-                      >
+                      <button type="submit" disabled={!adminChatInput.trim()} aria-label="Отправить">
                         <Send className="w-4 h-4" />
                       </button>
                     </form>
                   </>
-                  </div>
-                </>
-              )}
+                ) : (
+                  <div className="grok-empty-state">Выберите диалог клиента слева для переписки.</div>
+                )}
+              </main>
 
-              {/* Боковая панель с информацией о клиенте — выезжает справа поверх диалога, как в Telegram */}
+              {/* Профиль клиента — оверлей + выезжающая панель, 1:1 по коду Grok */}
               {showClientInfoPanel && activeChatClient && (
                 <>
-                  <div
-                    onClick={() => setShowClientInfoPanel(false)}
-                    className="fixed inset-0 bg-black/40 z-[60] animate-[fadeIn_0.2s_ease]"
-                  />
-                  <div className="fixed top-0 right-0 h-full w-full sm:w-[340px] z-[70] glass-card rounded-none sm:rounded-l-3xl shadow-2xl flex flex-col animate-[slideInRight_0.25s_ease]">
-                    <div className="p-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between shrink-0">
-                      <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Информация о клиенте</span>
-                      <button
-                        onClick={() => setShowClientInfoPanel(false)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-150 dark:hover:bg-slate-800 cursor-pointer"
-                      >
-                        <X className="w-4.5 h-4.5" />
+                  <div onClick={() => setShowClientInfoPanel(false)} className="grok-overlay visible" />
+                  <aside className="grok-profile-panel grok-glass-panel open">
+                    <button type="button" className="grok-panel-close" onClick={() => setShowClientInfoPanel(false)} aria-label="Закрыть">×</button>
+                    <div className="grok-panel-hero">
+                      <div className="grok-avatar-btn grok-avatar-md" style={{ margin: '0 auto 14px' }}>
+                        <UserAvatar user={activeChatClient} className="w-full h-full rounded-full" />
+                      </div>
+                      <div className="grok-panel-name">{activeChatClient.fullName}</div>
+                      <div className="grok-panel-status">{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</div>
+                    </div>
+                    <div className="grok-panel-section grok-glass">
+                      <div className="grok-panel-action"><span className="grok-icon">✉️</span> {activeChatClient.email}</div>
+                      <div className="grok-panel-action"><span className="grok-icon">📞</span> {activeChatClient.phone || 'Не указан'}</div>
+                      <div className="grok-panel-action"><span className="grok-icon">📦</span> Заказов: {database.orders.filter(o => o.userId === activeChatClient.id).length} шт.</div>
+                      <div className="grok-panel-action"><span className="grok-icon">📅</span> С нами с {new Date(activeChatClient.createdAt).toLocaleDateString('ru-RU')}</div>
+                    </div>
+                    <div className="grok-panel-section grok-glass">
+                      <button type="button" className="grok-panel-action" onClick={() => { handleClearChatHistory(activeChatUserId); setShowClientInfoPanel(false); }}>
+                        <span className="grok-icon">🗑</span> Очистить историю
                       </button>
                     </div>
-
-                    <div className="flex-1 overflow-y-auto p-5 space-y-5">
-                      <div className="flex flex-col items-center text-center pt-2 pb-4">
-                        <div className="relative">
-                          <UserAvatar user={activeChatClient} className="w-20 h-20 rounded-full ring-4 ring-indigo-500/10" />
-                          {activeChatClient.isOnline && (
-                            <span className="absolute bottom-1 right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" />
-                          )}
-                        </div>
-                        <h3 className="text-sm font-black text-slate-900 dark:text-white mt-3">{activeChatClient.fullName}</h3>
-                        <span className={`text-[10px] font-bold uppercase tracking-wider mt-1 ${activeChatClient.isOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
-                          {activeChatClient.isOnline ? 'В сети' : 'Не в сети'}
-                        </span>
-                      </div>
-
-                      <div className="space-y-3">
-                        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <UserIconLucide className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">Полное имя</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-white truncate block">{activeChatClient.fullName}</span>
-                          </div>
-                        </div>
-
-                        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <Mail className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">Электронная почта</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-white truncate block">{activeChatClient.email}</span>
-                          </div>
-                        </div>
-
-                        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <Phone className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">Телефон</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-white truncate block">{activeChatClient.phone || 'Не указан'}</span>
-                          </div>
-                        </div>
-
-                        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <FileText className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">Заказов оформлено</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-white truncate block">{database.orders.filter(o => o.userId === activeChatClient.id).length} шт.</span>
-                          </div>
-                        </div>
-
-                        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                            <Clock className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider block">Дата регистрации</span>
-                            <span className="text-xs font-bold text-slate-800 dark:text-white truncate block">{new Date(activeChatClient.createdAt).toLocaleDateString('ru-RU')}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        onClick={() => { handleClearChatHistory(activeChatUserId); setShowClientInfoPanel(false); }}
-                        className="w-full flex items-center justify-center gap-2 text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-950/50 px-3 py-2.5 rounded-xl font-bold transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        Очистить историю переписки
-                      </button>
-                    </div>
-                  </div>
+                  </aside>
                 </>
               )}
-
             </div>
           )}
 
           {/* TAB 3: USER RECORDS CONTROLS */}
+          {activeTab === 'users' && (
+            <div className="space-y-6">
           {activeTab === 'users' && (
             <div className="space-y-6">
               <div className="glass-panel rounded-3xl p-6 overflow-x-auto">
