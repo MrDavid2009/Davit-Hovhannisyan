@@ -2214,3 +2214,28 @@ button.glass-card::after,
 #admin-dashboard-root .chat-bubble-admin {
   background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
 }
+
+/* ============================================
+   СПИСОК ЧАТОВ АДМИНА — карточки клиентов под референс
+   ============================================ */
+#admin-dashboard-root .chat-list-card {
+  background: #ffffff !important;
+  border: 1px solid #eef0f4 !important;
+}
+#admin-dashboard-root .chat-list-card,
+#admin-dashboard-root .chat-list-card * {
+  color: #1e293b;
+}
+#admin-dashboard-root .chat-list-bubble.chat-list-bubble-filled,
+#admin-dashboard-root .chat-list-bubble.chat-list-bubble-filled * {
+  background: transparent;
+  color: #ffffff !important;
+}
+#admin-dashboard-root .chat-list-bubble.chat-list-bubble-filled {
+  background: #3b82f6 !important;
+}
+#admin-dashboard-root .chat-list-bubble.chat-list-bubble-empty {
+  background: #eef1f5 !important;
+  color: #94a3b8 !important;
+  font-style: italic;
+}
