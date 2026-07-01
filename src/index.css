@@ -2239,3 +2239,33 @@ button.glass-card::after,
   color: #94a3b8 !important;
   font-style: italic;
 }
+
+/* ============================================
+   ПАНЕЛЬ ЭМОДЗИ ДЛЯ ЧАТА (админка + клиент)
+   ============================================ */
+.emoji-picker-panel {
+  background: rgba(255,255,255,0.92) !important;
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.7);
+  box-shadow: 0 20px 50px rgba(15,23,42,0.22), inset 0 1px 0 rgba(255,255,255,0.9);
+  animation: emojiPanelIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: bottom left;
+}
+.dark .emoji-picker-panel {
+  background: rgba(20,22,35,0.94) !important;
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+@keyframes emojiPanelIn {
+  from { opacity: 0; transform: scale(0.9) translateY(6px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Защита панели эмодзи от общего правила читаемости в админке */
+#admin-dashboard-root .emoji-picker-panel {
+  background: rgba(255,255,255,0.92) !important;
+}
+.dark #admin-dashboard-root .emoji-picker-panel {
+  background: rgba(20,22,35,0.94) !important;
+}
