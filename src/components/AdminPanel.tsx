@@ -1477,8 +1477,8 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                         <button
                           type="button"
                           className="grok-avatar-btn grok-avatar-sm"
-                          onClick={(e) => { e.stopPropagation(); setActiveChatUserId(session.client.id); setShowClientInfoPanel(true); }}
-                          title="Открыть профиль"
+                          onClick={(e) => { e.stopPropagation(); setActiveChatUserId(session.client.id); setShowClientInfoPanel(false); }}
+                          title="Открыть диалог"
                         >
                           <UserAvatar user={session.client} className="w-full h-full rounded-full" />
                         </button>
