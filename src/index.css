@@ -2193,3 +2193,24 @@ button.glass-card::after,
   from { transform: translateX(100%); }
   to { transform: translateX(0); }
 }
+
+/* ============================================
+   ПУЗЫРЬКИ ЧАТА АДМИНА — защита от общего правила читаемости
+   (которое красит все rounded-2xl/xl в тёмный текст и белый фон)
+   ============================================ */
+#admin-dashboard-root .chat-bubble-client,
+#admin-dashboard-root .chat-bubble-client * {
+  background: transparent;
+  color: #ffffff !important;
+}
+#admin-dashboard-root .chat-bubble-client {
+  background: #3b82f6 !important;
+}
+#admin-dashboard-root .chat-bubble-admin,
+#admin-dashboard-root .chat-bubble-admin * {
+  background: transparent;
+  color: #ffffff !important;
+}
+#admin-dashboard-root .chat-bubble-admin {
+  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+}
