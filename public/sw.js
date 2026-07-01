@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pechat-24-v2';
+const CACHE_NAME = 'pechat-24-v8';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -35,12 +35,30 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // Bypass Service Worker for development assets to prevent cached corrupt compilation outputs
+  if (
+    url.pathname.startsWith('/@vite/') ||
+    url.pathname.includes('/@fs/') ||
+    url.pathname.includes('/node_modules/') ||
+    url.search.includes('vite') ||
+    url.hostname === 'localhost' ||
+    url.hostname.includes('ais-dev-')
+  ) {
+    return; // Pass through directly to network
+  }
+
   // Intercept Web Share Target POST requests containing shared files/text
   if (event.request.method === 'POST' && url.pathname === '/share-target') {
     event.respondWith(
       (async () => {
         try {
-          const formData = await event.request.formData();
+          let formData;
+          if (typeof event.request.formData === 'function') {
+            formData = await event.request.formData();
+          } else {
+            console.warn('request.formData() is not supported on this device/browser');
+            return Response.redirect('/?shared-target-unsupported=1', 303);
+          }
           const files = formData.getAll('files');
           const title = formData.get('title') || '';
           const text = formData.get('text') || '';
@@ -104,6 +122,38 @@ self.addEventListener('fetch', (event) => {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
   if (url.hostname.includes('firestore.googleapis.com') || url.hostname.includes('identitytoolkit.googleapis.com')) {
     return; // Pass directly to network
+  }
+
+  // Cache-first for compiled static assets, images, fonts and manifest
+  const isStaticAsset = 
+    url.pathname.startsWith('/assets/') || 
+    url.pathname.endsWith('.png') || 
+    url.pathname.endsWith('.ico') || 
+    url.pathname.endsWith('.json') || 
+    url.pathname.endsWith('.woff2') || 
+    url.pathname.endsWith('.svg');
+
+  if (isStaticAsset) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        return fetch(event.request).then((response) => {
+          if (response && response.status === 200) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseToCache);
+            });
+          }
+          return response;
+        }).catch((err) => {
+          console.warn('Silent asset fetch failure for: ' + url.pathname, err);
+          return new Response('', { status: 404 });
+        });
+      })
+    );
+    return;
   }
 
   // Network-first falling back to cache strategy
