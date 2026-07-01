@@ -2510,3 +2510,128 @@ button.glass-card::after,
   background: linear-gradient(145deg, var(--brand-orange), #7c3aed) !important;
 }
 
+
+/* ============================================
+   АНИМИРОВАННЫЕ СТИКЕРЫ ДЛЯ ЧАТА (по референсу)
+   ============================================ */
+.sticker-btn {
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  border-radius: 12px;
+  transition: background 0.15s;
+}
+.sticker-btn:hover {
+  background: rgba(249,115,22,0.08);
+}
+
+.sticker__bubble {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.06);
+  border: 1.5px solid rgba(249,115,22,0.35);
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  box-shadow: 0 0 16px rgba(249,115,22,0.25), inset 0 1px 0 rgba(255,255,255,0.12);
+  transition: transform 0.2s, box-shadow 0.2s;
+  margin: 0 auto;
+}
+.sticker-btn:hover .sticker__bubble {
+  transform: scale(1.1);
+  box-shadow: 0 0 26px rgba(249,115,22,0.4);
+}
+.sticker__label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #f97316;
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Неоновое вращающееся кольцо вокруг стикера */
+.sticker__bubble::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #f97316, transparent, #6366f1) border-box;
+  -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.7;
+  animation: sticker-ring-spin 4s linear infinite;
+  pointer-events: none;
+}
+@keyframes sticker-ring-spin { to { filter: hue-rotate(360deg); } }
+
+/* Анимации по типу эмоции */
+.anim-bounce { animation: sticker-bounce 1.2s ease-in-out infinite; }
+@keyframes sticker-bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+.anim-shake { animation: sticker-shake 0.6s ease-in-out infinite; }
+@keyframes sticker-shake { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-10deg); } 75% { transform: rotate(10deg); } }
+
+.anim-pulse { animation: sticker-pulse 1.5s ease-in-out infinite; }
+@keyframes sticker-pulse { 0%,100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.12); filter: brightness(1.3); } }
+
+.anim-spin { animation: sticker-spin 3s linear infinite; }
+@keyframes sticker-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.anim-wobble { animation: sticker-wobble 2s ease-in-out infinite; }
+@keyframes sticker-wobble { 0%,100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
+
+.anim-glow { animation: sticker-glow 1.8s ease-in-out infinite; }
+@keyframes sticker-glow {
+  0%,100% { box-shadow: 0 0 12px rgba(249,115,22,0.3); }
+  50% { box-shadow: 0 0 30px rgba(249,115,22,0.6), 0 0 45px rgba(99,102,241,0.35); }
+}
+
+.anim-float { animation: sticker-float 2.5s ease-in-out infinite; }
+@keyframes sticker-float { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.04); } }
+
+.anim-heartbeat { animation: sticker-heartbeat 1s ease-in-out infinite; }
+@keyframes sticker-heartbeat {
+  0%,100% { transform: scale(1); } 14% { transform: scale(1.18); } 28% { transform: scale(1); } 42% { transform: scale(1.12); }
+}
+
+.anim-rain { position: relative; overflow: visible; }
+.anim-rain::after {
+  content: "💧"; position: absolute; font-size: 11px; top: -6px; left: 50%;
+  animation: sticker-rain-drop 1.2s ease-in infinite; opacity: 0.8;
+}
+@keyframes sticker-rain-drop { 0% { transform: translate(-50%,0); opacity:0; } 30% { opacity:1; } 100% { transform: translate(-50%,22px); opacity:0; } }
+
+.anim-sparkle .emoji-inner { animation: sticker-sparkle 1.5s ease-in-out infinite; }
+@keyframes sticker-sparkle {
+  0%,100% { filter: drop-shadow(0 0 3px gold); }
+  50% { filter: drop-shadow(0 0 9px #fff) drop-shadow(0 0 14px gold); }
+}
+
+/* Частицы при клике */
+.emoji-particle {
+  position: fixed;
+  pointer-events: none;
+  font-size: 18px;
+  animation: emoji-particle-fly 0.8s ease-out forwards;
+  z-index: 9999;
+}
+@keyframes emoji-particle-fly {
+  to { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+/* Защита стикеров от общего правила читаемости в админке */
+#admin-dashboard-root .sticker__label {
+  color: #f97316 !important;
+}
+#admin-dashboard-root .sticker__bubble {
+  background: rgba(255,255,255,0.06) !important;
+  color: initial !important;
+}
