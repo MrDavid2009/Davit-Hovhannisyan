@@ -752,6 +752,40 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
     setAdminChatInput('');
   };
 
+  // Отправка стикера — уходит сразу же по клику, как в Telegram
+  const handleSendSticker = (sticker: { src: string; label: string }) => {
+    if (!activeChatUserId) return;
+    const fullUrl = window.location.origin + sticker.src;
+
+    const newMsg: ChatMessage = {
+      id: 'c_ad_sticker_' + Date.now(),
+      userId: activeChatUserId,
+      senderId: adminUser.id,
+      senderRole: 'admin',
+      senderName: adminUser.fullName,
+      message: '[STICKER]:' + fullUrl,
+      timestamp: new Date().toISOString(),
+      readByAdmin: true,
+      readByClient: false
+    };
+
+    onUpdateDatabase({
+      chatMessages: [...database.chatMessages, newMsg]
+    });
+
+    const client = database.users.find(u => u.id === activeChatUserId);
+    if (client?.telegramChatId || client?.telegramUsername) {
+      fetch('https://www.sever-18.ru/api/telegram_notify.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: activeChatUserId,
+          text: `💬 <b>Фото-Север</b>\\n\\nОтправлен стикер: ${sticker.label}\\n\\n<i>Ответить можно в личном кабинете: https://sever-18.ru</i>`
+        })
+      }).catch(() => {});
+    }
+  };
+
   // Edit / update client contact
   const handleStartEditUser = (u: User) => {
     setEditingUserId(u.id);
@@ -1466,7 +1500,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                   {chatSessions.map(session => {
                     const isSelected = session.client.id === activeChatUserId;
                     const preview = session.lastMsg
-                      ? (session.lastMsg.message.startsWith('[IMAGE]:') ? '📷 Фото' : session.lastMsg.message)
+                      ? (session.lastMsg.message.startsWith('[IMAGE]:') ? '📷 Фото' : session.lastMsg.message.startsWith('[STICKER]:') ? '✨ Стикер' : session.lastMsg.message)
                       : 'Нет сообщений';
                     return (
                       <div
@@ -1505,7 +1539,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       <button type="button" className="grok-avatar-btn" onClick={() => setShowClientInfoPanel(true)} title="Открыть профиль">
                         <UserAvatar user={activeChatClient} className="w-full h-full rounded-full" />
                       </button>
-                      <div className="grok-thread-title" onClick={() => setShowClientInfoPanel(true)} style={{ cursor: 'pointer' }}>
+                      <div className="grok-thread-title">
                         <h1>{activeChatClient.fullName}</h1>
                         <p style={{ color: activeChatClient.isOnline ? '#34d399' : undefined }}>{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</p>
                       </div>
@@ -1531,6 +1565,11 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                                 <UserAvatar user={activeChatClient} className="grok-avatar-btn grok-avatar-msg" />
                               )}
                               <div>
+                                {msg.message.startsWith('[STICKER]:') ? (
+                                  <div className="msg-sticker">
+                                    <img src={msg.message.substring(10)} className="msg-sticker__img" alt="Стикер" />
+                                  </div>
+                                ) : (
                                 <div className="grok-msg-bubble">
                                   {msg.message.startsWith('[IMAGE]:') ? (
                                     <div className="space-y-1 text-left">
@@ -1549,6 +1588,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                                     </div>
                                   ) : msg.message}
                                 </div>
+                                )}
                                 <div className="grok-msg-time">
                                   {msg.senderName} &bull; {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                                   {isAdmin && (msg.readByClient ? ' ✓✓' : ' ✓')}
@@ -1600,7 +1640,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                         </button>
                         {showEmojiPicker && (
                           <EmojiPicker
-                            onSelect={(emoji) => setAdminChatInput(prev => prev + emoji)}
+                            onSelect={(sticker) => handleSendSticker(sticker)}
                             onClose={() => setShowEmojiPicker(false)}
                           />
                         )}
