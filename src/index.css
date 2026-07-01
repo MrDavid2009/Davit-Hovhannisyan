@@ -2635,3 +2635,28 @@ button.glass-card::after,
   background: rgba(255,255,255,0.06) !important;
   color: initial !important;
 }
+
+/* ============================================
+   СТИКЕРЫ — картинка персонажа внутри пузыря/сообщения
+   ============================================ */
+.sticker__bubble {
+  overflow: hidden;
+  padding: 4px;
+}
+.sticker__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+}
+
+.msg-sticker {
+  display: inline-block;
+}
+.msg-sticker__img {
+  width: 120px;
+  height: auto;
+  border-radius: 18px;
+  filter: drop-shadow(0 4px 16px rgba(249,115,22,0.35));
+  animation: sticker-float 2.5s ease-in-out infinite;
+}
