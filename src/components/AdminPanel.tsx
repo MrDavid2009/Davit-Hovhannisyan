@@ -1498,7 +1498,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                           </div>
                           
                           <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-1">
-                            {session.lastMsg ? session.lastMsg.message : 'Нет сообщений'}
+                            {session.lastMsg ? (session.lastMsg.message.startsWith('[IMAGE]:') ? '📷 Изображение' : session.lastMsg.message) : 'Нет сообщений'}
                           </p>
 
                           {session.lastMsg && (
