@@ -26,7 +26,8 @@ import {
   onSnapshot,
   getDocFromServer,
   addDoc,
-  deleteDoc
+  deleteDoc,
+  increment
 } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -60,6 +61,7 @@ export {
   getDocFromServer,
   addDoc,
   deleteDoc,
+  increment,
   ref,
   uploadBytes,
   getDownloadURL
