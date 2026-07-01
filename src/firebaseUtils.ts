@@ -346,7 +346,7 @@ export async function trackSiteVisit(): Promise<void> {
   }
 }
 
-
+export function subscribeToFirebaseCollections(
   currentUser: User, 
   onSync: (state: Partial<DatabaseState>) => void
 ): () => void {
