@@ -2181,3 +2181,15 @@ button.glass-card::after,
   0%, 100% { background-color: rgba(99, 102, 241, 0.12); }
   50% { background-color: rgba(244, 63, 94, 0.28); }
 }
+
+/* ============================================
+   БОКОВАЯ ПАНЕЛЬ ИНФОРМАЦИИ О КЛИЕНТЕ (чат) — анимации появления
+   ============================================ */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
