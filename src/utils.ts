@@ -18,8 +18,8 @@ try {
 const SEED_USERS: User[] = [
   {
     id: 'u1',
-    email: 'photo-sever@yandex.ru',
-    fullName: 'Фото-Север (Администратор)',
+    email: 'admin@print.ru',
+    fullName: 'Дмитрий (Администратор)',
     role: 'admin',
     createdAt: '2026-05-01T10:00:00Z',
     phone: '+7 (900) 123-45-67',
@@ -150,7 +150,7 @@ const SEED_CHATS: ChatMessage[] = [
     userId: 'u2',
     senderId: 'u1',
     senderRole: 'admin',
-    senderName: 'Оператор',
+    senderName: 'Дмитрий (Администратор)',
     message: 'Добрый день, Иван! Да, конечно. Файл принят в работу, распечатаем вовремя.',
     timestamp: '2026-06-05T14:25:00Z',
     readByAdmin: true,
@@ -161,7 +161,7 @@ const SEED_CHATS: ChatMessage[] = [
     userId: 'u2',
     senderId: 'u1',
     senderRole: 'admin',
-    senderName: 'Оператор',
+    senderName: 'Дмитрий (Администратор)',
     message: 'Ваш заказ ORD-1001 готов и ожидает вас!',
     timestamp: '2026-06-05T15:58:00Z',
     readByAdmin: true,
@@ -183,7 +183,7 @@ const SEED_CHATS: ChatMessage[] = [
     userId: 'u3',
     senderId: 'u1',
     senderRole: 'admin',
-    senderName: 'Оператор',
+    senderName: 'Дмитрий (Администратор)',
     message: 'Здравствуйте! Будет сделано в лучшем виде. Поставил на профессиональный плоттер Epson.',
     timestamp: '2026-06-06T11:20:00Z',
     readByAdmin: true,
@@ -214,7 +214,7 @@ const SEED_NOTIFICATIONS: AppNotification[] = [
     id: 'n3',
     userId: 'u2',
     title: 'Новое сообщение',
-    body: 'Оператор ответил на ваш вопрос в чате.',
+    body: 'Администратор Дмитрий ответил на ваш вопрос в чате.',
     timestamp: '2026-06-05T14:25:00Z',
     read: true,
     type: 'chat',
@@ -813,7 +813,21 @@ export function showBrowserNotification(title: string, body: string) {
 }
 
 export function isWorkingHours(): boolean {
-  return true;
+  const date = new Date();
+  const day = date.getDay(); // 0: Sunday, 1: Monday, ..., 6: Saturday
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const currentTimeInMinutes = hours * 60 + minutes;
+
+  if (day >= 1 && day <= 5) {
+    // Monday - Friday: 09:00 - 19:00
+    return currentTimeInMinutes >= 9 * 60 && currentTimeInMinutes < 19 * 60;
+  } else if (day === 6 || day === 0) {
+    // Saturday & Sunday: 10:00 - 19:00
+    return currentTimeInMinutes >= 10 * 60 && currentTimeInMinutes < 19 * 60;
+  }
+  return false;
 }
+
 
 
