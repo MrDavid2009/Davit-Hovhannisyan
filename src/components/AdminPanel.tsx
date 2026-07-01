@@ -1665,7 +1665,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
               {/* Профиль клиента — оверлей + выезжающая панель, 1:1 по коду Grok */}
               {showClientInfoPanel && activeChatClient && (
                 <>
-                  <div onClick={() => setShowClientInfoPanel(false)} className="grok-overlay visible" />
+                  <div onClick={() => setShowClientInfoPanel(false)} className="fixed inset-0 z-40" />
                   <aside className="grok-profile-panel grok-glass-panel open">
                     <button type="button" className="grok-panel-close" onClick={() => setShowClientInfoPanel(false)} aria-label="Закрыть">×</button>
                     <div className="grok-panel-hero">
