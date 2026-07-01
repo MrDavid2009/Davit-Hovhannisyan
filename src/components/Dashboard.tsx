@@ -8,6 +8,7 @@ import { User, Order, ChatMessage, Notification, PrintFile, FileFormatGroup, Pay
 import { ThemeToggle } from './ThemeToggle';
 import { RatingWidget } from './RatingWidget';
 import { UserAvatar } from './UserAvatar';
+import { EmojiPicker } from './EmojiPicker';
 import logoImg from '../assets/logo.png';
 import { 
   FileText, Upload, Trash2, MapPin, Sliders, FileType, CheckCircle, Clock, 
@@ -574,6 +575,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
   // Live chat state
   const [chatInput, setChatInput] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Notification states
@@ -2820,6 +2822,22 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
               {/* Chat inputs panel */}
               <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 glass-panel flex gap-2">
+                <div className="relative shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(v => !v)}
+                    className="bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 font-bold p-3 rounded-xl transition flex items-center justify-center border border-slate-200 dark:border-slate-850 h-full"
+                    title="Эмодзи"
+                  >
+                    <span className="text-base leading-none">😊</span>
+                  </button>
+                  {showEmojiPicker && (
+                    <EmojiPicker
+                      onSelect={(emoji) => setChatInput(prev => prev + emoji)}
+                      onClose={() => setShowEmojiPicker(false)}
+                    />
+                  )}
+                </div>
                 <input
                   type="text"
                   value={chatInput}
