@@ -2195,24 +2195,29 @@ button.glass-card::after,
 }
 
 /* ============================================
-   ПУЗЫРЬКИ ЧАТА АДМИНА — защита от общего правила читаемости
-   (которое красит все rounded-2xl/xl в тёмный текст и белый фон)
+   ПУЗЫРЬКИ ЧАТА АДМИНА — нейтральное стекло (без ярких цветов), по референсу Grok
    ============================================ */
 #admin-dashboard-root .chat-bubble-client,
 #admin-dashboard-root .chat-bubble-client * {
-  background: transparent;
-  color: #ffffff !important;
+  color: #1e293b !important;
 }
 #admin-dashboard-root .chat-bubble-client {
-  background: #3b82f6 !important;
+  background: rgba(255,255,255,0.65) !important;
+  border: 1px solid rgba(15,23,42,0.08) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 2px 8px rgba(15,23,42,0.05);
 }
 #admin-dashboard-root .chat-bubble-admin,
 #admin-dashboard-root .chat-bubble-admin * {
-  background: transparent;
-  color: #ffffff !important;
+  color: #1e293b !important;
 }
 #admin-dashboard-root .chat-bubble-admin {
-  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+  background: rgba(226,232,240,0.75) !important;
+  border: 1px solid rgba(15,23,42,0.1) !important;
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 2px 8px rgba(15,23,42,0.06);
 }
 
 /* ============================================
@@ -2228,11 +2233,11 @@ button.glass-card::after,
 }
 #admin-dashboard-root .chat-list-bubble.chat-list-bubble-filled,
 #admin-dashboard-root .chat-list-bubble.chat-list-bubble-filled * {
-  background: transparent;
-  color: #ffffff !important;
+  color: #1e293b !important;
 }
 #admin-dashboard-root .chat-list-bubble.chat-list-bubble-filled {
-  background: #3b82f6 !important;
+  background: rgba(241,245,249,0.9) !important;
+  border: 1px solid rgba(15,23,42,0.08) !important;
 }
 #admin-dashboard-root .chat-list-bubble.chat-list-bubble-empty {
   background: #eef1f5 !important;
