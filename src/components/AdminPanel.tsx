@@ -1476,21 +1476,21 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       <button
                         key={session.client.id}
                         onClick={() => { setActiveChatUserId(session.client.id); setShowClientInfoPanel(false); }}
-                        className={`chat-list-card w-full text-left rounded-2xl p-3 flex items-center gap-3 transition-all shadow-sm hover:shadow-md ${
+                        className={`chat-list-card w-full text-left rounded-2xl p-3 pt-2.5 transition-all shadow-sm hover:shadow-md block ${
                           isSelected ? 'ring-2 ring-indigo-400' : ''
                         } ${session.unreadCount > 0 ? 'chat-card-blink' : ''}`}
                       >
-                        <div className="relative shrink-0">
-                          <UserAvatar
-                            user={session.client}
-                            className="w-11 h-11 rounded-full ring-2 ring-white shadow-md"
-                          />
-                          {session.client.isOnline && (
-                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" title="Онлайн" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
+                        <div className="flex items-center justify-between gap-2 mb-2 pl-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="relative shrink-0">
+                              <UserAvatar
+                                user={session.client}
+                                className="w-8 h-8 rounded-full ring-2 ring-white shadow-md"
+                              />
+                              {session.client.isOnline && (
+                                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full" title="Онлайн" />
+                              )}
+                            </div>
                             <h4 className="text-[13px] font-black text-slate-800 truncate">{session.client.fullName}</h4>
                             {session.unreadCount > 0 && (
                               <span className="bg-rose-500 text-white text-[9px] font-black w-5 h-5 rounded-full shrink-0 flex items-center justify-center animate-pulse">
@@ -1498,17 +1498,18 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                               </span>
                             )}
                           </div>
-
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`chat-list-bubble ${hasMsg ? 'chat-list-bubble-filled' : 'chat-list-bubble-empty'} px-3 py-1 rounded-full text-[11px] font-semibold truncate max-w-[75%]`}>
-                              {preview}
+                          {session.lastMsg && (
+                            <span className="text-[10px] text-slate-400 italic shrink-0 font-medium">
+                              {new Date(session.lastMsg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            {session.lastMsg && (
-                              <span className="text-[9px] text-slate-400 italic shrink-0 font-medium">
-                                {new Date(session.lastMsg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
-                            )}
-                          </div>
+                          )}
+                        </div>
+
+                        <div
+                          className={`chat-list-bubble ${hasMsg ? 'chat-list-bubble-filled' : 'chat-list-bubble-empty'} rounded-2xl px-4 py-2.5 text-[12px] font-semibold leading-snug`}
+                          style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as any, overflow: 'hidden' }}
+                        >
+                          {preview}
                         </div>
                       </button>
                     );
