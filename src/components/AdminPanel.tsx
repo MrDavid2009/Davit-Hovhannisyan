@@ -1655,8 +1655,6 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
           {/* TAB 3: USER RECORDS CONTROLS */}
           {activeTab === 'users' && (
             <div className="space-y-6">
-          {activeTab === 'users' && (
-            <div className="space-y-6">
               <div className="glass-panel rounded-3xl p-6 overflow-x-auto">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
                   <div>
