@@ -1463,7 +1463,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 glass-panel rounded-3xl overflow-hidden" style={{ height: '600px' }}>
               
               {/* Clients sidebar list */}
-              <div className={`md:col-span-4 border-r border-slate-150 dark:border-slate-800 flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10 ${activeChatUserId ? 'hidden md:flex' : 'flex'}`}>
+              <div className={`col-span-12 border-r border-slate-150 dark:border-slate-800 flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10 ${activeChatUserId ? 'hidden' : 'flex'}`}>
                 <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
                   <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Кабинеты Пользователей ({clientsOnly.length})</span>
                 </div>
@@ -1517,7 +1517,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
               </div>
 
               {/* Active Conversation screen */}
-              <div className={`md:col-span-8 flex-col h-full min-h-0 bg-transparent ${activeChatUserId ? 'flex' : 'hidden md:flex'}`}>
+              <div className={`col-span-12 flex-col h-full min-h-0 bg-transparent ${activeChatUserId ? 'flex' : 'hidden'}`}>
                 {activeChatUserId ? (
                   <>
                     {/* Header info */}
@@ -1525,7 +1525,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => setActiveChatUserId(null)}
-                          className="md:hidden shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-150 dark:hover:bg-slate-800 cursor-pointer"
+                          className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:bg-slate-150 dark:hover:bg-slate-800 cursor-pointer"
                           title="Назад к списку"
                         >
                           <ChevronLeft className="w-5 h-5" />
