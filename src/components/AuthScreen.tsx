@@ -290,8 +290,8 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
               mask: 'radial-gradient(farthest-side, transparent calc(100% - 2px), white calc(100% - 2px))',
             }}
           />
-          <div className="relative w-24 h-24 rounded-full bg-white/95 dark:bg-white/10 backdrop-blur-md border-4 border-white/90 dark:border-white/15 shadow-2xl flex items-center justify-center overflow-hidden">
-            <img src="/logo-192-v2.png" alt="Фото-Север" className="w-14 h-14 object-contain rounded-full" />
+          <div className="relative w-28 h-28 rounded-full backdrop-blur-md shadow-2xl flex items-center justify-center overflow-hidden">
+            <img src="/logo-192-v2.png" alt="Фото-Север" className="w-full h-full object-cover" />
           </div>
         </div>
 
@@ -310,16 +310,11 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
           </div>
 
           <div className="text-left">
-            <h2 className="text-xl font-black text-slate-900 dark:text-white leading-snug font-display tracking-tight text-center">
+            <h2 className="mb-6 text-xl font-black text-slate-900 dark:text-white leading-snug font-display tracking-tight text-center">
               {mode === 'login' && 'Вход в Кабинет'}
               {mode === 'signup' && 'Создать Кабинет'}
               {mode === 'forgot' && 'Сброс Пароля'}
             </h2>
-            <p className="mt-1.5 mb-6 text-xs text-slate-500 dark:text-slate-400 max-w-[280px] mx-auto leading-relaxed font-sans font-medium text-center">
-              {mode === 'login' && 'Мгновенная печать фотографий, документов и чертежей.'}
-              {mode === 'signup' && 'Регистрация займет меньше минуты. Печатайте онлайн.'}
-              {mode === 'forgot' && 'Введите ваш e-mail для отправки инструкций сброса.'}
-            </p>
 
             {/* Feedback alerts */}
             {errorMsg && (
