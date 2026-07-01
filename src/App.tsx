@@ -14,6 +14,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { Dashboard } from './components/Dashboard';
 import { AdminPanel } from './components/AdminPanel';
 import { OnboardingScreen } from './components/OnboardingScreen';
+import { LandingPage } from './components/LandingPage';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, FileText } from 'lucide-react';
 import { auth, onAuthStateChanged } from './firebase';
@@ -34,6 +35,9 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(
     () => !localStorage.getItem('sever18_onboarded')
   );
+
+  // Маркетинговая главная страница — показывается гостям до формы входа
+  const [showLanding, setShowLanding] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -318,7 +322,9 @@ export default function App() {
             transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
             className="min-h-screen"
           >
-            {!user && showOnboarding ? (
+            {!user && showLanding ? (
+              <LandingPage onEnter={() => setShowLanding(false)} />
+            ) : !user && showOnboarding ? (
               <OnboardingScreen onDone={() => setShowOnboarding(false)} />
             ) : !user ? (
               <AuthScreen
