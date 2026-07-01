@@ -22,7 +22,8 @@ import {
   seedInitialDataIfRequired, 
   syncLocalUpdatesToFirebase, 
   deleteUserAccountWithFirebase,
-  signOutUserWithFirebase
+  signOutUserWithFirebase,
+  trackSiteVisit
 } from './firebaseUtils';
 
 export default function App() {
@@ -39,6 +40,12 @@ export default function App() {
       setShowSplash(false);
     }, 2800);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Учёт визита на сайт — срабатывает для КАЖДОГО посетителя,
+  // независимо от того, вошёл ли он в аккаунт или зарегистрирован ли вообще
+  useEffect(() => {
+    trackSiteVisit();
   }, []);
 
   // Core user session state
