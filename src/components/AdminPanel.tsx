@@ -516,12 +516,8 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
   const clientsOnly = database.users.filter(u => u.role === 'client');
   const sortedOrders = [...database.orders].sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 
-  // Set initial active chat client if not set
-  useEffect(() => {
-    if (!activeChatUserId && clientsOnly.length > 0) {
-      setActiveChatUserId(clientsOnly[0].id);
-    }
-  }, [clientsOnly, activeChatUserId]);
+  // Список клиентов теперь открывается по умолчанию (без автовыбора первого чата) —
+  // это нужно для режима "как в Telegram": назад = список, а не мгновенный переход в чат.
 
   // Read message handler - mark client chats as read by admin
   useEffect(() => {
