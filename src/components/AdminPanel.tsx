@@ -1666,7 +1666,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
               {showClientInfoPanel && activeChatClient && (
                 <>
                   <div onClick={() => setShowClientInfoPanel(false)} className="fixed inset-0 z-40" />
-                  <aside className="grok-profile-panel grok-glass-panel open">
+                  <aside className="grok-profile-panel grok-glass-panel open" style={{ background: '#16171c' }}>
                     <button type="button" className="grok-panel-close" onClick={() => setShowClientInfoPanel(false)} aria-label="Закрыть">×</button>
                     <div className="grok-panel-hero">
                       <div className="grok-avatar-btn grok-avatar-md" style={{ margin: '0 auto 14px' }}>
