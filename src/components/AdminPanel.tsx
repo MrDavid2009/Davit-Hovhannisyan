@@ -1580,7 +1580,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                     </div>
 
                     {/* Message Logs */}
-                    <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-4 bg-slate-50/20 dark:bg-slate-950/10">
+                    <div className="flex-1 min-h-0 p-4 overflow-y-auto space-y-5" style={{ background: '#eef2f7' }}>
                       {activeTalkingChat.length === 0 ? (
                         <p className="text-xs text-slate-400 text-center py-10 mt-10">Нет сообщений в этой ветке.</p>
                       ) : (
@@ -1589,29 +1589,26 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                           return (
                             <div
                               key={msg.id}
-                              className={`group flex gap-2.5 max-w-[85%] items-end ${isAdmin ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+                              className={`group flex items-start gap-2.5 ${isAdmin ? 'flex-row-reverse' : ''}`}
                             >
                               {isAdmin ? (
-                                <div className="w-7 h-7 rounded-full shrink-0 mb-1 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm">
-                                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                                <div className="w-9 h-9 rounded-full shrink-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md ring-2 ring-white">
+                                  <ShieldCheck className="w-4 h-4 text-white" />
                                 </div>
                               ) : (
-                                <UserAvatar user={activeChatClient} className="w-7 h-7 rounded-full shrink-0 mb-1" />
+                                <UserAvatar user={activeChatClient} className="w-9 h-9 rounded-full shrink-0 shadow-md ring-2 ring-white" />
                               )}
-                              <button
-                                onClick={() => handleDeleteMessage(msg.id)}
-                                title="Удалить сообщение"
-                                className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-6 h-6 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 dark:text-rose-400 flex items-center justify-center cursor-pointer mb-1"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                              <div className="space-y-1">
-                                <span className="text-[10px] font-black text-slate-600 dark:text-slate-300 flex items-center gap-1 px-1">
-                                  <span>{msg.senderName} &bull; {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</span>
+
+                              <div className={`flex-1 min-w-0 max-w-[78%] ${isAdmin ? 'flex flex-col items-end' : ''}`}>
+                                <div className={`flex items-baseline gap-2 px-1 mb-1 ${isAdmin ? 'flex-row-reverse' : ''}`}>
+                                  <span className="text-[13px] font-black text-slate-800">{msg.senderName}</span>
+                                  <span className="text-[10px] text-slate-450 italic">
+                                    {new Date(msg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
                                   {isAdmin && (
-                                    <span className="inline-flex items-center ml-0.5" title={msg.readByClient ? "Прочитано" : "Доставлено"}>
+                                    <span className="inline-flex items-center" title={msg.readByClient ? "Прочитано" : "Доставлено"}>
                                       {msg.readByClient ? (
-                                        <span className="text-blue-500 dark:text-blue-400 flex items-center relative w-4.5 h-3">
+                                        <span className="text-blue-500 flex items-center relative w-4.5 h-3">
                                           <svg className="w-3 h-3 absolute left-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                                             <polyline points="20 6 9 17 4 12" />
                                           </svg>
@@ -1620,7 +1617,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                                           </svg>
                                         </span>
                                       ) : (
-                                        <span className="text-slate-400 dark:text-slate-500 flex items-center w-3 h-3">
+                                        <span className="text-slate-400 flex items-center w-3 h-3">
                                           <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                                             <polyline points="20 6 9 17 4 12" />
                                           </svg>
@@ -1628,19 +1625,25 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                                       )}
                                     </span>
                                   )}
-                                </span>
+                                  <button
+                                    onClick={() => handleDeleteMessage(msg.id)}
+                                    title="Удалить сообщение"
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 w-5 h-5 rounded-md bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 flex items-center justify-center cursor-pointer"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+
                                 <div
-                                  className={`p-3 rounded-2xl text-xs font-medium shadow-xs border ${
-                                    isAdmin
-                                      ? 'bg-indigo-600 text-white border-transparent rounded-tr-none'
-                                      : 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200/80 dark:border-slate-700/60 rounded-tl-none'
+                                  className={`chat-bubble-${isAdmin ? 'admin' : 'client'} inline-block p-3 rounded-2xl text-[13px] font-medium shadow-sm ${
+                                    isAdmin ? 'rounded-tr-sm' : 'rounded-tl-sm'
                                   }`}
                                 >
                                   {msg.message.startsWith('[IMAGE]:') ? (
                                     <div className="space-y-1 my-0.5 text-left">
                                       <img
                                         src={msg.message.substring(8)}
-                                        className="rounded-xl max-w-[200px] sm:max-w-xs cursor-pointer hover:opacity-90 shadow-sm border border-slate-200 dark:border-slate-800"
+                                        className="rounded-xl max-w-[200px] sm:max-w-xs cursor-pointer hover:opacity-90 shadow-sm"
                                         alt="Пример готового продукта"
                                         onClick={() => {
                                           const imgWin = window.open('', '_blank');
@@ -1649,7 +1652,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                                           }
                                         }}
                                       />
-                                      <span className={`text-[9px] opacity-70 block italic ${isAdmin ? 'text-indigo-200' : 'text-slate-400'}`}>Защищено водяным знаком &bull; ПРИМЕР</span>
+                                      <span className="text-[9px] opacity-80 block italic">Защищено водяным знаком &bull; ПРИМЕР</span>
                                     </div>
                                   ) : (
                                     msg.message
