@@ -393,7 +393,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
 
                 <button
                   type="submit"
-                  className="w-full flex justify-center items-center gap-2 py-3.5 px-4 mt-2 rounded-full shadow-lg shadow-blue-900/15 text-xs font-bold text-slate-900 bg-white hover:bg-slate-50 active:scale-[0.985] transition-all cursor-pointer"
+                  className="btn-holo-glass w-full flex justify-center items-center gap-2 py-3.5 px-4 mt-2 rounded-full text-xs font-bold text-slate-900 active:scale-[0.985] transition-all cursor-pointer"
                 >
                   Войти в кабинет
                   <ArrowRight className="w-4 h-4" />
@@ -473,7 +473,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
 
                 <button
                   type="submit"
-                  className="w-full flex justify-center items-center py-3.5 px-4 mt-2 rounded-full shadow-lg shadow-blue-900/15 text-xs font-bold text-slate-900 bg-white hover:bg-slate-50 active:scale-[0.985] transition-all cursor-pointer"
+                  className="btn-holo-glass w-full flex justify-center items-center py-3.5 px-4 mt-2 rounded-full text-xs font-bold text-slate-900 active:scale-[0.985] transition-all cursor-pointer"
                 >
                   Создать профиль
                 </button>
@@ -503,7 +503,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                   type="submit"
                   disabled={isForgotPasswordSent}
                   className={`w-full flex justify-center items-center py-3 px-4 rounded-full text-xs font-bold transition-colors cursor-pointer ${
-                    isForgotPasswordSent ? 'bg-slate-400 dark:bg-slate-700 text-white cursor-not-allowed animate-pulse' : 'bg-white text-slate-900 hover:bg-slate-50 shadow-lg shadow-blue-900/15'
+                    isForgotPasswordSent ? 'bg-slate-400 dark:bg-slate-700 text-white cursor-not-allowed animate-pulse' : 'btn-holo-glass text-slate-900'
                   }`}
                 >
                   {isForgotPasswordSent ? 'Инструкции отправлены' : 'Сбросить пароль'}
@@ -535,7 +535,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                   type="button"
                   onClick={() => triggerSocialAuth('google')}
                   disabled={!!socialLoading}
-                  className="flex justify-center items-center gap-2 py-3 px-3 rounded-2xl bg-white/85 dark:bg-white/8 border border-slate-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/15 text-xs font-bold text-slate-700 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
+                  className="btn-holo-glass flex justify-center items-center gap-2 py-3 px-3 rounded-2xl text-xs font-bold text-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
                   title="Google ID"
                 >
                   {socialLoading === 'google' ? (
@@ -554,7 +554,7 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
                   type="button"
                   onClick={() => triggerSocialAuth('telegram')}
                   disabled={!!socialLoading}
-                  className="flex justify-center items-center gap-2 py-3 px-3 rounded-2xl bg-white/85 dark:bg-white/8 border border-slate-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/15 text-xs font-bold text-slate-750 dark:text-slate-300 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
+                  className="btn-holo-glass flex justify-center items-center gap-2 py-3 px-3 rounded-2xl text-xs font-bold text-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:-translate-y-0.5 active:translate-y-0"
                   title="Telegram Authenticator"
                 >
                   {socialLoading === 'telegram' ? (
