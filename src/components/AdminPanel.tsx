@@ -1195,20 +1195,6 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                     </button>
                   ))}
                 </div>
-
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => {
-                      const csvOrders = statusFilter === 'all' ? sortedOrders : sortedOrders.filter(o => o.status === statusFilter);
-                      import('../utils').then(({ exportToCSV }) => exportToCSV(csvOrders, 'Общий_Финансовый_Реестр'));
-                    }}
-                    disabled={sortedOrders.length === 0}
-                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 glass-card text-xs font-bold rounded-xl text-white"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5" />
-                    Экспорт Excel
-                  </button>
-                </div>
                 </div>
               </div>
 
