@@ -1090,6 +1090,16 @@ body {
   border: 1px solid rgba(255,255,255,0.6) !important;
 }
 
+/* Активный пункт меню — версия для АДМИНКИ (фон применяется прямо на кнопке, не на дочернем div) */
+#admin-dashboard-root aside button.nav-holo-active {
+  background: rgba(255,255,255,0.55) !important;
+  color: #1e293b !important;
+}
+#admin-dashboard-root aside button.nav-holo-active:hover {
+  background: rgba(255,255,255,0.65) !important;
+}
+
+
 /* 3D стеклянные иконки — переопределяем capsule */
 .glass-icon-capsule {
   background: rgba(255,255,255,0.18) !important;
@@ -2098,25 +2108,29 @@ button:hover .glass-icon-capsule {
 button.glass-card,
 .filter-pill-btn.active,
 .glass-pill-active {
-  position: relative;
+  position: relative !important;
   isolation: isolate;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.6),
+    0 4px 18px rgba(56,189,248,0.35),
+    0 4px 18px rgba(244,114,182,0.28) !important;
 }
 button.glass-card::after,
 .filter-pill-btn.active::after,
 .glass-pill-active::after {
   content: "";
   position: absolute;
-  inset: -1.5px;
+  inset: -2px;
   border-radius: inherit;
-  padding: 1.5px;
-  background: linear-gradient(90deg, #7dd3fc, #f0abfc, #fda4af, #fdba74, #a7f3d0, #7dd3fc);
+  padding: 2px;
+  background: linear-gradient(90deg, #38bdf8, #e879f9, #fb7185, #fb923c, #34d399, #38bdf8);
   background-size: 300% 100%;
   animation: holo-border-shift 5s linear infinite;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-  z-index: 3;
+  z-index: 5;
 }
 
 /* ============================================
@@ -2125,23 +2139,27 @@ button.glass-card::after,
    ============================================ */
 .nav-holo-active,
 .nav-holo-pill {
-  position: relative;
+  position: relative !important;
   isolation: isolate;
   border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.5),
+    0 4px 16px rgba(56,189,248,0.3),
+    0 4px 16px rgba(244,114,182,0.24);
 }
 .nav-holo-active::after,
 .nav-holo-pill::after {
   content: "";
   position: absolute;
-  inset: -1.5px;
+  inset: -2px;
   border-radius: inherit;
-  padding: 1.5px;
-  background: linear-gradient(90deg, #7dd3fc, #f0abfc, #fda4af, #fdba74, #a7f3d0, #7dd3fc);
+  padding: 2px;
+  background: linear-gradient(90deg, #38bdf8, #e879f9, #fb7185, #fb923c, #34d399, #38bdf8);
   background-size: 300% 100%;
   animation: holo-border-shift 5s linear infinite;
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-  z-index: 3;
+  z-index: 5;
 }
