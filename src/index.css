@@ -2118,3 +2118,30 @@ button.glass-card::after,
   pointer-events: none;
   z-index: 3;
 }
+
+/* ============================================
+   БОКОВОЕ МЕНЮ — голографическая обводка активного пункта
+   (админка и кабинет клиента)
+   ============================================ */
+.nav-holo-active,
+.nav-holo-pill {
+  position: relative;
+  isolation: isolate;
+  border-radius: 1rem;
+}
+.nav-holo-active::after,
+.nav-holo-pill::after {
+  content: "";
+  position: absolute;
+  inset: -1.5px;
+  border-radius: inherit;
+  padding: 1.5px;
+  background: linear-gradient(90deg, #7dd3fc, #f0abfc, #fda4af, #fdba74, #a7f3d0, #7dd3fc);
+  background-size: 300% 100%;
+  animation: holo-border-shift 5s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 3;
+}
