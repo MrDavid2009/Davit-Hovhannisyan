@@ -1462,7 +1462,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 glass-panel rounded-3xl overflow-hidden" style={{ height: '600px' }}>
               
               {/* Clients sidebar list */}
-              <div className={`col-span-12 border-r border-slate-150 dark:border-slate-800 flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10 ${activeChatUserId ? 'hidden' : 'flex'}`}>
+              <div className="col-span-12 border-r border-slate-150 dark:border-slate-800 flex flex-col h-full min-h-0 bg-slate-50/20 dark:bg-slate-950/10">
                 <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30">
                   <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Кабинеты Пользователей ({clientsOnly.length})</span>
                 </div>
@@ -1526,9 +1526,14 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                 </div>
               </div>
 
-              {/* Active Conversation screen */}
-              <div className={`col-span-12 flex-col h-full min-h-0 bg-transparent ${activeChatUserId ? 'flex' : 'hidden'}`}>
-                {activeChatUserId ? (
+              {/* Active Conversation screen — выезжает справа поверх списка, список остаётся виден */}
+              {activeChatUserId && (
+                <>
+                  <div
+                    onClick={() => { setActiveChatUserId(null); setShowClientInfoPanel(false); }}
+                    className="fixed inset-0 bg-black/30 z-40 animate-[fadeIn_0.2s_ease]"
+                  />
+                  <div className="fixed top-0 right-0 h-full w-full sm:w-[600px] z-50 bg-white dark:bg-slate-950 shadow-2xl flex flex-col animate-[slideInRight_0.25s_ease] rounded-none sm:rounded-l-3xl overflow-hidden">
                   <>
                     {/* Header info */}
                     <div className="p-4 border-b border-slate-150 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/20 flex items-center justify-between">
@@ -1733,21 +1738,18 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       </button>
                     </form>
                   </>
-                ) : (
-                  <div className="h-full flex flex-col justify-center items-center text-center p-8">
-                    <p className="text-xs text-slate-400 font-bold">Выберите диалог клиента слева для переписки.</p>
                   </div>
-                )}
-              </div>
+                </>
+              )}
 
               {/* Боковая панель с информацией о клиенте — выезжает справа поверх диалога, как в Telegram */}
               {showClientInfoPanel && activeChatClient && (
                 <>
                   <div
                     onClick={() => setShowClientInfoPanel(false)}
-                    className="fixed inset-0 bg-black/30 z-40 animate-[fadeIn_0.2s_ease]"
+                    className="fixed inset-0 bg-black/40 z-[60] animate-[fadeIn_0.2s_ease]"
                   />
-                  <div className="fixed top-0 right-0 h-full w-full sm:w-[340px] z-50 glass-card rounded-none sm:rounded-l-3xl shadow-2xl flex flex-col animate-[slideInRight_0.25s_ease]">
+                  <div className="fixed top-0 right-0 h-full w-full sm:w-[340px] z-[70] glass-card rounded-none sm:rounded-l-3xl shadow-2xl flex flex-col animate-[slideInRight_0.25s_ease]">
                     <div className="p-4 border-b border-slate-150 dark:border-slate-800 flex items-center justify-between shrink-0">
                       <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Информация о клиенте</span>
                       <button
