@@ -1465,49 +1465,50 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                   <span className="text-xs font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Кабинеты Пользователей ({clientsOnly.length})</span>
                 </div>
 
-                <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-850">
+                <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-2.5" style={{ background: '#eef2f7' }}>
                   {chatSessions.map(session => {
                     const isSelected = session.client.id === activeChatUserId;
+                    const hasMsg = !!session.lastMsg;
+                    const preview = session.lastMsg
+                      ? (session.lastMsg.message.startsWith('[IMAGE]:') ? '📷 Фото' : session.lastMsg.message)
+                      : 'Нет сообщений';
                     return (
                       <button
                         key={session.client.id}
                         onClick={() => { setActiveChatUserId(session.client.id); setShowClientInfoPanel(false); }}
-                        className={`w-full p-4 text-left flex items-start gap-3 transition-colors ${
-                          isSelected 
-                            ? 'bg-indigo-50/45 dark:bg-slate-800/50' 
-                            : session.unreadCount > 0 ? 'chat-card-blink' : 'hover:bg-slate-100/50 dark:hover:bg-slate-850/40'
-                        }`}
+                        className={`chat-list-card w-full text-left rounded-2xl p-3 flex items-center gap-3 transition-all shadow-sm hover:shadow-md ${
+                          isSelected ? 'ring-2 ring-indigo-400' : ''
+                        } ${session.unreadCount > 0 ? 'chat-card-blink' : ''}`}
                       >
                         <div className="relative shrink-0">
                           <UserAvatar
                             user={session.client}
-                            className="w-10 h-10 rounded-xl ring-2 ring-indigo-500/10"
+                            className="w-11 h-11 rounded-full ring-2 ring-white shadow-md"
                           />
                           {session.client.isOnline && (
-                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full" title="Онлайн" />
+                            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full" title="Онлайн" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex justify-between items-baseline">
-                            <h4 className="text-xs font-bold text-slate-800 dark:text-white truncate">{session.client.fullName}</h4>
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <h4 className="text-[13px] font-black text-slate-800 truncate">{session.client.fullName}</h4>
                             {session.unreadCount > 0 && (
-                              <span className="bg-rose-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full shrink-0 animate-pulse">
+                              <span className="bg-rose-500 text-white text-[9px] font-black w-5 h-5 rounded-full shrink-0 flex items-center justify-center animate-pulse">
                                 {session.unreadCount}
                               </span>
                             )}
                           </div>
-                          
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-1">
-                            {session.lastMsg
-                              ? (session.lastMsg.message.startsWith('[IMAGE]:') ? '📷 Фото' : session.lastMsg.message)
-                              : 'Нет сообщений'}
-                          </p>
 
-                          {session.lastMsg && (
-                            <span className="text-[9px] text-slate-400 block mt-0.5 font-medium">
-                              {new Date(session.lastMsg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className={`chat-list-bubble ${hasMsg ? 'chat-list-bubble-filled' : 'chat-list-bubble-empty'} px-3 py-1 rounded-full text-[11px] font-semibold truncate max-w-[75%]`}>
+                              {preview}
                             </span>
-                          )}
+                            {session.lastMsg && (
+                              <span className="text-[9px] text-slate-400 italic shrink-0 font-medium">
+                                {new Date(session.lastMsg.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </button>
                     );
