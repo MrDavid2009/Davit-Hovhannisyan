@@ -1507,7 +1507,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       </button>
                       <div className="grok-thread-title" onClick={() => setShowClientInfoPanel(true)} style={{ cursor: 'pointer' }}>
                         <h1>{activeChatClient.fullName}</h1>
-                        <p>{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</p>
+                        <p style={{ color: activeChatClient.isOnline ? '#34d399' : undefined }}>{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</p>
                       </div>
                       <button
                         type="button"
@@ -1633,7 +1633,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                         <UserAvatar user={activeChatClient} className="w-full h-full rounded-full" />
                       </div>
                       <div className="grok-panel-name">{activeChatClient.fullName}</div>
-                      <div className="grok-panel-status">{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</div>
+                      <div className="grok-panel-status" style={{ color: activeChatClient.isOnline ? '#34d399' : undefined }}>{activeChatClient.isOnline ? 'в сети' : 'не в сети'}</div>
                     </div>
                     <div className="grok-panel-section grok-glass">
                       <div className="grok-panel-action"><span className="grok-icon">✉️</span> {activeChatClient.email}</div>
