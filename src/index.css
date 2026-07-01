@@ -2440,3 +2440,71 @@ button.glass-card::after,
   .grok-chat-app.chat-open .grok-sidebar { display: none; }
   .grok-chat-app.chat-open .grok-main { display: flex; }
 }
+
+/* ============================================
+   ЧАТ АДМИНА — акценты и кнопки в цветах сайта (оранжевый/синий)
+   ============================================ */
+.grok-chat-app {
+  --brand-orange: #f97316;
+  --brand-blue: #6366f1;
+}
+
+/* Активный клиент в списке — акцентная полоса + подсветка бренд-цветом */
+.grok-chat-item.active {
+  background: linear-gradient(90deg, rgba(249,115,22,0.16), rgba(99,102,241,0.1)) !important;
+  border-left: 3px solid var(--brand-orange);
+  padding-left: 11px;
+}
+
+/* Кнопка отправки — фирменный градиент вместо серого стекла */
+.grok-composer button[type="submit"] {
+  background: linear-gradient(135deg, var(--brand-orange), #fb923c) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(249,115,22,0.4);
+}
+.grok-composer button[type="submit"]:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+.grok-composer button[type="submit"]:disabled {
+  background: var(--glass-strong) !important;
+  box-shadow: none;
+}
+
+/* Иконки в поле ввода и в шапке — стеклянные, но с акцентной обводкой при наведении, как кнопки сайта */
+.grok-composer-icon-btn,
+.grok-header-icon-btn,
+.grok-back-btn {
+  transition: all 0.2s ease;
+}
+.grok-composer-icon-btn:hover,
+.grok-header-icon-btn:hover {
+  border-color: var(--brand-orange) !important;
+  box-shadow: 0 0 0 3px rgba(249,115,22,0.15);
+}
+
+/* Пузырь исходящих сообщений (наши ответы) — лёгкий фирменный оттенок */
+.grok-msg-row.out .grok-msg-bubble {
+  background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(249,115,22,0.18)) !important;
+  border-color: rgba(249,115,22,0.35) !important;
+}
+
+/* Непрочитанные — фирменный оранжевый вместо стандартного красного */
+.grok-unread-badge {
+  background: var(--brand-orange) !important;
+}
+
+/* Панель профиля — кнопки-действия с акцентной иконкой */
+.grok-panel-action:hover {
+  background: linear-gradient(90deg, rgba(249,115,22,0.12), rgba(99,102,241,0.08)) !important;
+}
+.grok-panel-action .grok-icon {
+  color: var(--brand-orange);
+  opacity: 1;
+}
+
+/* Аватар-кнопки — фирменное свечение вместо серого градиента */
+.grok-avatar-btn {
+  background: linear-gradient(145deg, var(--brand-orange), #7c3aed) !important;
+}
+
