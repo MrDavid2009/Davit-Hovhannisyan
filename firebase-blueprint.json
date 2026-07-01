@@ -73,6 +73,16 @@
         "type": { "type": "string", "enum": ["order_status", "chat", "payment", "profile"] }
       },
       "required": ["id", "userId", "title", "body", "timestamp", "read", "type"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "System config settings and counters",
+      "type": "object",
+      "properties": {
+        "visits": { "type": "number", "description": "Global count of visitor logs" },
+        "history": { "type": "array", "description": "Historic graph logs per day" }
+      },
+      "required": ["visits", "history"]
     }
   },
   "firestore": {
@@ -91,6 +101,10 @@
     "/notifications/{notificationId}": {
       "schema": "Notification",
       "description": "System-to-client notification history messages"
+    },
+    "/configs/{configId}": {
+      "schema": "Config",
+      "description": "Analytics statistics collection configuration"
     }
   }
 }
