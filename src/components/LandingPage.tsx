@@ -60,8 +60,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             </a>
             <button
               onClick={onEnter}
-              className="btn-holo-glass flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-slate-900 cursor-pointer"
-              style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 60%, rgba(255,255,255,0.55) 100%)", color: "#0f172a" }}
+              className="landing-cta-btn btn-holo-glass flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold cursor-pointer"
             >
               Войти в кабинет
               <ArrowRight className="w-3.5 h-3.5" />
@@ -78,19 +77,18 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             Принимаем заказы онлайн
           </div>
 
-          <h1 className="text-3xl sm:text-4xl md:text-[42px] font-black leading-[1.1] tracking-tight mb-4">
+          <h1 className="landing-h1 text-3xl sm:text-4xl md:text-[42px] font-black leading-[1.1] tracking-tight mb-4">
             Печать фото и документов<br className="hidden sm:block" /> в Раменском <span className="bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent">за минуты</span>
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-500 dark:text-white/60 leading-relaxed mb-7 max-w-md">
+          <p className="landing-p text-sm sm:text-base leading-relaxed mb-7 max-w-md">
             Загрузи файл онлайн — мы распечатаем и сообщим, когда будет готово. Фото, документы А4/А3, чертежи, переплёт. Без очередей и звонков.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 mb-8">
             <button
               onClick={onEnter}
-              className="btn-holo-glass flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold text-slate-900 cursor-pointer"
-              style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 60%, rgba(255,255,255,0.55) 100%)", color: "#0f172a" }}
+              className="landing-cta-btn btn-holo-glass flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold cursor-pointer"
             >
               <Upload className="w-4 h-4" />
               Загрузить файл
@@ -151,7 +149,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
       {/* ===== КАК ЗАКАЗАТЬ ===== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
-        <h2 className="text-2xl sm:text-3xl font-black text-center mb-2">Как заказать</h2>
+        <h2 className="landing-h2 text-2xl sm:text-3xl font-black text-center mb-2">Как заказать</h2>
         <p className="text-sm text-slate-500 dark:text-white/50 text-center mb-10">Три шага — и готово</p>
 
         <div className="grid sm:grid-cols-3 gap-5">
@@ -182,7 +180,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         <div className="glass-card rounded-3xl p-6 sm:p-8">
           <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
             <div>
-              <h2 className="text-xl sm:text-2xl font-black mb-1">Цены</h2>
+              <h2 className="landing-h2 text-xl sm:text-2xl font-black mb-1">Цены</h2>
               <p className="text-xs text-slate-500 dark:text-white/50">Ориентировочные — точную стоимость увидите при оформлении заказа</p>
             </div>
             <button
@@ -208,7 +206,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
 
       {/* ===== КАРТА ===== */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-14">
-        <h2 className="text-2xl sm:text-3xl font-black text-center mb-2">Где нас найти</h2>
+        <h2 className="landing-h2 text-2xl sm:text-3xl font-black text-center mb-2">Где нас найти</h2>
         <p className="text-sm text-slate-500 dark:text-white/50 text-center mb-8">Раменское, Северное шоссе, 18</p>
 
         <div className="glass-card rounded-3xl overflow-hidden">
@@ -228,8 +226,7 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <a
               href="https://yandex.ru/maps/?text=Раменское%20Северное%20шоссе%2018&rtext=~Раменское%20Северное%20шоссе%2018"
               target="_blank" rel="noopener noreferrer"
-              className="btn-holo-glass flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold text-slate-900 cursor-pointer"
-              style={{ background: "linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 60%, rgba(255,255,255,0.55) 100%)", color: "#0f172a" }}
+              className="landing-cta-btn btn-holo-glass flex items-center gap-2 px-5 py-2.5 rounded-full text-xs font-bold cursor-pointer"
             >
               Построить маршрут
               <ExternalLink className="w-3.5 h-3.5" />
