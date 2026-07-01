@@ -2660,3 +2660,25 @@ button.glass-card::after,
   filter: drop-shadow(0 4px 16px rgba(249,115,22,0.35));
   animation: sticker-float 2.5s ease-in-out infinite;
 }
+
+/* ============================================
+   ГЛАВНАЯ СТРАНИЦА — гарантированно читаемые цвета
+   (не зависят от переменной темы/каскада, максимальный приоритет)
+   ============================================ */
+h1.landing-h1 {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+h2.landing-h2 {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+p.landing-p {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+a.landing-cta-btn, button.landing-cta-btn, a.landing-cta-btn *, button.landing-cta-btn * {
+  color: #0f172a !important;
+  background: #ffffff !important;
+  opacity: 1 !important;
+}
