@@ -1985,7 +1985,9 @@ button:hover .glass-icon-capsule {
 }
 #auth-screen-root .glass-cozy-card .text-blue-600,
 #auth-screen-root .glass-cozy-card .text-blue-500,
-#auth-screen-root .glass-cozy-card .text-blue-400 {
+#auth-screen-root .glass-cozy-card .text-blue-400,
+#auth-screen-root .glass-cozy-card .text-blue-800,
+#auth-screen-root .glass-cozy-card .text-blue-300 {
   color: #93c5fd !important;
 }
 #auth-screen-root .glass-cozy-card .text-rose-700,
