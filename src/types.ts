@@ -20,6 +20,9 @@ export interface User {
   promoCode?: string;
   promoDiscount?: number;
   promoGiftedSeen?: boolean;
+  promoExpiresAt?: string;
+  telegramNotificationsEnabled?: boolean;
+  telegramUsername?: string;
 }
 
 export type FileFormatGroup = 'archive' | 'image' | 'document' | 'other';
@@ -62,6 +65,8 @@ export interface Order {
   binding?: 'none' | 'staple' | 'file' | 'spring_plastic' | 'spring_metal' | 'hard_cover';
   promoCode?: string;
   promoDiscount?: number;
+  rating?: 1 | 2 | 3 | 4 | 5;
+  ratingComment?: string;
 }
 
 export interface ChatMessage {
@@ -93,6 +98,11 @@ export interface PaymentConfig {
   enableSbp: boolean;
   sbpPhone?: string;
   instructions?: string;
+  companyName?: string;
+  companyInn?: string;
+  companyOgrn?: string;
+  companyAddress?: string;
+  refundPolicy?: string;
 }
 
 export interface DatabaseState {
