@@ -21,6 +21,7 @@ import {
 import { deleteUserAccountWithFirebase, deleteOrderFromFirebase, saveOrderToFirebase } from '../firebaseUtils';
 import { db, doc, setDoc, deleteDoc } from '../firebase';
 import { UserAvatar } from './UserAvatar';
+import { EmojiPicker } from './EmojiPicker';
 import JSZip from 'jszip';
 
 interface AdminPanelProps {
@@ -83,6 +84,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
 
   // Selected client for chat thread
   const [activeChatUserId, setActiveChatUserId] = useState<string>('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showClientInfoPanel, setShowClientInfoPanel] = useState(false);
   const [adminChatInput, setAdminChatInput] = useState('');
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -1697,6 +1699,23 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                       >
                         <ImageIcon className="w-4 h-4 text-slate-600 dark:text-slate-300 shrink-0" />
                       </button>
+
+                      <div className="relative shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setShowEmojiPicker(v => !v)}
+                          className="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 font-bold p-3 rounded-xl transition flex items-center justify-center border border-slate-200 dark:border-slate-750"
+                          title="Эмодзи"
+                        >
+                          <span className="text-base leading-none">😊</span>
+                        </button>
+                        {showEmojiPicker && (
+                          <EmojiPicker
+                            onSelect={(emoji) => setAdminChatInput(prev => prev + emoji)}
+                            onClose={() => setShowEmojiPicker(false)}
+                          />
+                        )}
+                      </div>
 
                       <input
                         type="text"
