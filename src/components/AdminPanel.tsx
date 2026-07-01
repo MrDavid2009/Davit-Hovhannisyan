@@ -965,7 +965,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
             </div>
           </div>
 
-          <div className="px-3.5 py-2.5 glass-card rounded-xl mb-6 text-[11px] text-white/75 font-bold">
+          <div className="px-1 mb-6 text-[11px] text-white/50 font-bold uppercase tracking-wider">
             Режим Администратора сайта
           </div>
         </div>
