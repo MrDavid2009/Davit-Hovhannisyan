@@ -488,7 +488,7 @@ export function subscribeToFirebaseCollections(
   try {
     const unsubServices = onSnapshot(collection(db, 'services'), (snap) => {
       const services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      onUpdate({ services });
+      onSync({ services });
     });
     unsubscribes.push(unsubServices);
   } catch (e) {
