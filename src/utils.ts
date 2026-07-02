@@ -813,20 +813,9 @@ export function showBrowserNotification(title: string, body: string) {
 }
 
 export function isWorkingHours(): boolean {
-  const date = new Date();
-  const day = date.getDay(); // 0: Sunday, 1: Monday, ..., 6: Saturday
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const currentTimeInMinutes = hours * 60 + minutes;
-
-  if (day >= 1 && day <= 5) {
-    // Monday - Friday: 09:00 - 19:00
-    return currentTimeInMinutes >= 9 * 60 && currentTimeInMinutes < 19 * 60;
-  } else if (day === 6 || day === 0) {
-    // Saturday & Sunday: 10:00 - 19:00
-    return currentTimeInMinutes >= 10 * 60 && currentTimeInMinutes < 19 * 60;
-  }
-  return false;
+  // Онлайн-приём файлов работает 24/7 — клиент может загрузить в любое время,
+  // заказ будет обработан в ближайшее рабочее время.
+  return true;
 }
 
 
