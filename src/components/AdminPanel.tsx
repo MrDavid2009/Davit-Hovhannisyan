@@ -2165,101 +2165,97 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
 
           {/* TAB 4: INTERACTIVE INTERACTIVE ANALYTICS SYSTEM */}
           {activeTab === 'analytics' && (
-            <div className="space-y-6">
+            <div className="space-y-5 overflow-y-auto flex-1 min-h-0 pb-6">
               
-              {/* Top stats grid widgets */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+              {/* 5 симметричных карточек — одинаковый размер */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 
-                <div className="glass-panel p-5 rounded-3xl">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Общий оборот</span>
-                      <p className="text-2xl font-black text-indigo-650 dark:text-white">₽{totalRevenue}</p>
-                    </div>
-                    <div className="p-2.5 bg-indigo-50 dark:bg-slate-850 text-indigo-600 dark:text-indigo-400 rounded-2xl">
-                      <TrendingUp className="w-5 h-5" />
+                {/* Оборот */}
+                <div className="analytics-card rounded-3xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-white/50 tracking-widest">Оборот</span>
+                    <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-indigo-400" />
                     </div>
                   </div>
-                  <div className="text-[10px] text-emerald-600 font-bold mt-2">
-                    &uarr; 100% зачисление на банковский ПК
-                  </div>
-                </div>
-
-                <div className="glass-panel p-5 rounded-3xl">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Всего Заказов</span>
-                      <p className="text-2xl font-black text-slate-800 dark:text-white">{database.orders.length} шт.</p>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-850 text-slate-500 rounded-2xl">
-                      <FileCheck className="w-5 h-5 animate-pulse" />
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold mt-2">
-                    Из них: {database.orders.filter(o => o.status === 'printed').length} выполненных
+                  <div>
+                    <p className="text-2xl font-black text-white leading-none">₽{totalRevenue}</p>
+                    <p className="text-[9px] text-emerald-400 font-bold mt-1.5">↑ 100% зачисление</p>
                   </div>
                 </div>
 
-                <div className="glass-panel p-5 rounded-3xl">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">База Клиентов</span>
-                      <p className="text-2xl font-black text-slate-800 dark:text-white">{clientsOnly.length} чел.</p>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-850 text-slate-500 rounded-2xl">
-                      <Users className="w-5 h-5" />
+                {/* Заказы */}
+                <div className="analytics-card rounded-3xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-white/50 tracking-widest">Заказы</span>
+                    <div className="w-8 h-8 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <FileCheck className="w-4 h-4 text-purple-400" />
                     </div>
                   </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    Учетных записей защищено SSL
-                  </div>
-                </div>
-
-                <div className="glass-panel p-5 rounded-3xl">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">В Печатной Работе</span>
-                      <p className="text-2xl font-black text-indigo-755 dark:text-indigo-400">{database.orders.filter(o => o.status === 'printing').length} задач</p>
-                    </div>
-                    <div className="p-2.5 bg-slate-550/10 text-indigo-600 dark:text-indigo-400 rounded-2xl">
-                      <Printer className="w-5 h-5 animate-spin" />
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-slate-400 mt-2">
-                    Заказов ожидает: {database.orders.filter(o => o.status === 'pending').length} проверку
+                  <div>
+                    <p className="text-2xl font-black text-white leading-none">{database.orders.length}</p>
+                    <p className="text-[9px] text-white/40 font-bold mt-1.5">{database.orders.filter(o => o.status === 'printed').length} выполнено</p>
                   </div>
                 </div>
 
-                <div className="glass-panel p-5 rounded-3xl">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Заходы на Сайт</span>
-                      <p className="text-2xl font-black text-slate-800 dark:text-white">
-                        {(() => {
-                          const today = new Date().toISOString().split('T')[0];
-                          const todayData = (database.siteVisitsHistory || []).find((h: any) => h.date === today);
-                          return todayData?.count || 0;
-                        })()}
-                      </p>
-                      <div className="text-[10px] text-slate-400">Сегодня • Всего: {database.siteVisits || 0}</div>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 dark:bg-slate-850 text-slate-500 rounded-2xl">
-                      <Users className="w-5 h-5" />
+                {/* Клиенты */}
+                <div className="analytics-card rounded-3xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-white/50 tracking-widest">Клиенты</span>
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-emerald-400" />
                     </div>
                   </div>
-                  {/* График последних 7 дней */}
-                  <div className="flex items-end gap-1 h-10 mt-2">
+                  <div>
+                    <p className="text-2xl font-black text-white leading-none">{clientsOnly.length}</p>
+                    <p className="text-[9px] text-white/40 font-bold mt-1.5">Защищено SSL</p>
+                  </div>
+                </div>
+
+                {/* В печати */}
+                <div className="analytics-card rounded-3xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-white/50 tracking-widest">В печати</span>
+                    <div className="w-8 h-8 rounded-xl bg-orange-500/20 flex items-center justify-center">
+                      <Printer className="w-4 h-4 text-orange-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-white leading-none">{database.orders.filter(o => o.status === 'printing').length}</p>
+                    <p className="text-[9px] text-white/40 font-bold mt-1.5">Ждут: {database.orders.filter(o => o.status === 'pending').length} шт.</p>
+                  </div>
+                </div>
+
+                {/* Заходы на сайт */}
+                <div className="analytics-card rounded-3xl p-4 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black uppercase text-white/50 tracking-widest">Заходы</span>
+                    <div className="w-8 h-8 rounded-xl bg-sky-500/20 flex items-center justify-center">
+                      <BarChart3 className="w-4 h-4 text-sky-400" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-black text-white leading-none">
+                      {(() => {
+                        const today = new Date().toISOString().split('T')[0];
+                        const todayData = (database.siteVisitsHistory || []).find((h: any) => h.date === today);
+                        return todayData?.count || 0;
+                      })()}
+                    </p>
+                    <p className="text-[9px] text-white/40 font-bold mt-1.5">Всего: {database.siteVisits || 0}</p>
+                  </div>
+                  {/* Мини-график */}
+                  <div className="flex items-end gap-0.5 h-6 mt-auto">
                     {(database.siteVisitsHistory || []).slice(-7).map((h: any, i: number) => {
                       const max = Math.max(...(database.siteVisitsHistory || []).slice(-7).map((x: any) => x.count || 0), 1);
-                      const height = Math.max(4, Math.round((h.count / max) * 40));
+                      const height = Math.max(2, Math.round((h.count / max) * 24));
                       const isToday = h.date === new Date().toISOString().split('T')[0];
                       return (
-                        <div key={i} className="flex-1 flex flex-col items-center gap-0.5" title={`${h.date}: ${h.count} визитов`}>
+                        <div key={i} className="flex-1">
                           <div
-                            className={`w-full rounded-sm transition-all ${isToday ? 'bg-indigo-500' : 'bg-slate-600/50'}`}
-                            style={{height: `${height}px`}}
+                            className={`w-full rounded-sm ${isToday ? 'bg-sky-400' : 'bg-white/20'}`}
+                            style={{ height: `${height}px` }}
                           />
-                          <span className="text-[8px] text-slate-500">{h.date.slice(8)}</span>
                         </div>
                       );
                     })}
