@@ -598,6 +598,37 @@ export async function seedInitialDataIfRequired(): Promise<void> {
   } catch (err) {
     console.error('Failed to seed default data', err);
   }
+
+  // Отдельно — заполняем витрину услуг если она пуста
+  try {
+    const servicesSnap = await getDocs(collection(db, 'services'));
+    if (servicesSnap.empty) {
+      console.log('Seeding services catalog...');
+      const SERVICES = [
+        { id: 'svc_print_a4_bw', emoji: '🖨️', title: 'Печать А4 ч/б', description: 'Чёрно-белая печать на офисной бумаге А4', price: '20 ₽/стр', priceNum: 20, unit: 'стр', category: 'print', isActive: true, order: 1, imageUrl: '' },
+        { id: 'svc_print_a4_color_eco', emoji: '🎨', title: 'Печать А4 цвет (эконом)', description: 'Цветная печать А4 — эконом качество', price: '25 ₽/стр', priceNum: 25, unit: 'стр', category: 'print', isActive: true, order: 2, imageUrl: '' },
+        { id: 'svc_print_a4_color_std', emoji: '🎨', title: 'Печать А4 цвет (стандарт)', description: 'Цветная печать А4 — стандарт качество', price: '40 ₽/стр', priceNum: 40, unit: 'стр', category: 'print', isActive: true, order: 3, imageUrl: '' },
+        { id: 'svc_print_a4_color_pro', emoji: '🎨', title: 'Печать А4 цвет (фото)', description: 'Цветная печать А4 — фотокачество', price: '65 ₽/стр', priceNum: 65, unit: 'стр', category: 'print', isActive: true, order: 4, imageUrl: '' },
+        { id: 'svc_print_a3_bw_std', emoji: '📄', title: 'Печать А3 ч/б (офисная бумага)', description: 'Чёрно-белая печать А3 на офисной бумаге', price: '100 ₽/стр', priceNum: 100, unit: 'стр', category: 'print', isActive: true, order: 5, imageUrl: '' },
+        { id: 'svc_print_a3_color_std', emoji: '📄', title: 'Печать А3 цвет (офисная бумага)', description: 'Цветная печать А3 на офисной бумаге', price: '150 ₽/стр', priceNum: 150, unit: 'стр', category: 'print', isActive: true, order: 6, imageUrl: '' },
+        { id: 'svc_print_a3_bw_thick', emoji: '📐', title: 'Печать А3 ч/б (плотная бумага)', description: 'Чёрно-белая печать А3 на плотной бумаге', price: '250 ₽/стр', priceNum: 250, unit: 'стр', category: 'print', isActive: true, order: 7, imageUrl: '' },
+        { id: 'svc_print_a3_color_thick', emoji: '📐', title: 'Печать А3 цвет (плотная бумага)', description: 'Цветная печать А3 на плотной бумаге', price: '250 ₽/стр', priceNum: 250, unit: 'стр', category: 'print', isActive: true, order: 8, imageUrl: '' },
+        { id: 'svc_photo_docs', emoji: '📷', title: 'Фото на документы', description: 'Фото на паспорт, водительское и другие документы. Печать сразу в офисе.', price: '450 ₽/комплект', priceNum: 450, unit: 'комплект', category: 'photo', isActive: true, order: 9, imageUrl: '' },
+        { id: 'svc_scan', emoji: '🔍', title: 'Сканирование', description: 'Сканирование документов в PDF или JPG', price: '20 ₽/стр', priceNum: 20, unit: 'стр', category: 'scan', isActive: true, order: 10, imageUrl: '' },
+        { id: 'svc_laminate_a4', emoji: '🛡️', title: 'Ламинирование А4', description: 'Ламинирование документов А4 — защита от влаги и износа', price: '100 ₽/лист', priceNum: 100, unit: 'лист', category: 'laminate', isActive: true, order: 11, imageUrl: '' },
+        { id: 'svc_binding_soft', emoji: '📎', title: 'Переплёт (мягкий)', description: 'Мягкий термопереплёт документов', price: '250 ₽/шт', priceNum: 250, unit: 'шт', category: 'binding', isActive: true, order: 12, imageUrl: '' },
+        { id: 'svc_binding_std', emoji: '📚', title: 'Переплёт (стандарт)', description: 'Стандартный переплёт с обложкой', price: '350 ₽/шт', priceNum: 350, unit: 'шт', category: 'binding', isActive: true, order: 13, imageUrl: '' },
+        { id: 'svc_binding_hard', emoji: '📗', title: 'Переплёт (жёсткий)', description: 'Твёрдый переплёт — диплом, дипломная работа', price: '450 ₽/шт', priceNum: 450, unit: 'шт', category: 'binding', isActive: true, order: 14, imageUrl: '' },
+        { id: 'svc_ceramics', emoji: '🏺', title: 'Печать на керамике', description: 'Кружки, тарелки, фотоплитки — только в офисе. Каталог у администратора на Северном шоссе, 18.', price: 'По каталогу', priceNum: 0, unit: 'шт', category: 'ceramics', isActive: true, order: 15, imageUrl: '' },
+      ];
+      for (const svc of SERVICES) {
+        await setDoc(doc(db, 'services', svc.id), svc);
+      }
+      console.log('Services seeded!');
+    }
+  } catch (err) {
+    console.error('Failed to seed services', err);
+  }
 }
 
 /**
