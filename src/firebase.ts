@@ -11,7 +11,9 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
-  type User as FirebaseUser 
+  type User as FirebaseUser,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { 
   initializeFirestore,
@@ -49,6 +51,8 @@ export {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   doc,
   getDoc,
   setDoc,
