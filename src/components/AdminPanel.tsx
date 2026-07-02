@@ -1259,7 +1259,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
         </header>
 
         {/* WORKSPACE CONTENT AREA */}
-        <div className={`flex-1 ${activeTab === 'chat' ? 'p-1.5 sm:p-3 md:p-8 overflow-hidden' : 'p-4 md:p-8 space-y-6 overflow-y-auto'} max-w-6xl w-full mx-auto flex flex-col min-h-0`}>
+        <div className={`flex-1 ${activeTab === 'chat' ? 'p-0 sm:p-0 md:p-4 overflow-hidden' : 'p-4 md:p-8 space-y-6 overflow-y-auto'} max-w-6xl w-full mx-auto flex flex-col min-h-0`}>
           
           {/* TAB 1: ALL ORDERS AND FILES DOWNLOADS */}
           {activeTab === 'orders' && (
