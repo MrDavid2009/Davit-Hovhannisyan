@@ -484,6 +484,17 @@ export function subscribeToFirebaseCollections(
     unsubscribes.push(unsubStats);
   }
 
+  // Подписка на витрину услуг (читают все — подписываемся всегда)
+  try {
+    const unsubServices = onSnapshot(collection(db, 'services'), (snap) => {
+      const services = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      onUpdate({ services });
+    });
+    unsubscribes.push(unsubServices);
+  } catch (e) {
+    console.error('Services subscription error:', e);
+  }
+
   // Return a master cleanup unsubscriber
   return () => {
     unsubscribes.forEach(un => un());
