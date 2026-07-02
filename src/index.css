@@ -3158,3 +3158,22 @@ html, body, #root {
   0%, 100% { transform: translateY(0); opacity: 1; }
   50% { transform: translateY(8px); opacity: 0.3; }
 }
+
+/* ============================================
+   КНОПКА ЗАГРУЗКИ — liquid glass с неоновой обводкой (как на GIF)
+   ============================================ */
+@keyframes upload-btn-glow {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.upload-drop-zone:hover .upload-plus-icon {
+  transform: scale(1.08);
+}
+.upload-drop-zone:hover .upload-select-btn {
+  box-shadow: 0 0 36px rgba(99,102,241,0.6), 0 0 72px rgba(99,102,241,0.2) !important;
+}
+.upload-drop-zone:active {
+  transform: scale(0.98);
+}
