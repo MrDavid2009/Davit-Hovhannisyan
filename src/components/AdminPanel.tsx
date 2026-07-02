@@ -1775,177 +1775,149 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
 
           {/* TAB 3: USER RECORDS CONTROLS */}
           {activeTab === 'users' && (
-            <div className="space-y-6">
-              <div className="glass-panel rounded-3xl p-6 overflow-x-auto">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-                  <div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-wider">База зарегистрированных пользователей</h3>
-                    <p className="text-[10px] text-white/50 mt-1">Нажмите на строку любого пользователя для просмотра реестра всех его загруженных файлов.</p>
-                  </div>
-                  <div className="relative w-full sm:w-72">
-                    <Search className="w-4 h-4 text-white/65 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      value={clientSearchQuery}
-                      onChange={(e) => setClientSearchQuery(e.target.value)}
-                      placeholder="Поиск по имени, email или телефону..."
-                      className="glass-input w-full pl-9 pr-9 py-2 text-xs text-white placeholder:text-white/40 rounded-xl focus:outline-none transition-all"
-                    />
-                    {clientSearchQuery && (
-                      <button
-                        onClick={() => setClientSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/65 hover:text-white"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pb-6">
+
+              {/* Шапка с поиском */}
+              <div className="user-db-header rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                  <h3 className="text-base font-black text-white uppercase tracking-widest mb-0.5">База пользователей</h3>
+                  <p className="text-[11px] text-white/50">Нажмите на клиента для просмотра файлов</p>
                 </div>
+                <div className="relative w-full sm:w-72">
+                  <Search className="w-4 h-4 text-white/50 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={clientSearchQuery}
+                    onChange={(e) => setClientSearchQuery(e.target.value)}
+                    placeholder="Поиск по имени, email или телефону..."
+                    className="glass-input w-full pl-9 pr-9 py-2.5 text-xs text-white placeholder:text-white/40 rounded-2xl focus:outline-none"
+                  />
+                  {clientSearchQuery && (
+                    <button onClick={() => setClientSearchQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
 
-                <table className="w-full text-xs text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-white/10 text-white/50 uppercase text-[10px] tracking-widest">
-                      <th className="py-3 px-4 font-bold">Фото</th>
-                      <th className="py-3 px-4 font-bold">ФИО клиента</th>
-                      <th className="py-3 px-4 font-bold">Электронная почта</th>
-                      <th className="py-3 px-4 font-bold">Телефон</th>
-                      <th className="py-3 px-4 font-bold">Дата регистрации</th>
-                      <th className="py-3 px-4 font-bold text-center">Файлов</th>
-                      <th className="py-3 px-4 font-bold text-right">Действия</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-850/60 font-medium font-medium">
-                    {database.users.filter(cli => {
-                      if (cli.role === 'admin' || cli.email === 'photo-sever@yandex.ru') return false;
-                      if (clientSearchQuery.trim() !== '') {
-                        const q = clientSearchQuery.trim().toLowerCase();
-                        const matchesName = (cli.fullName || '').toLowerCase().includes(q);
-                        const matchesEmail = (cli.email || '').toLowerCase().includes(q);
-                        const matchesPhone = (cli.phone || '').toLowerCase().includes(q);
-                        if (!matchesName && !matchesEmail && !matchesPhone) return false;
-                      }
-                      return true;
-                    }).map(cli => {
-                      const userOrders = database.orders.filter(o => o.userId === cli.id);
-                      const filesCount = userOrders.reduce((sum, o) => sum + (o.files?.length || 0), 0);
-                      const isAdmin = cli.role === 'admin';
+              {/* Карточки клиентов */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {database.users.filter(cli => {
+                  if (cli.role === 'admin' || cli.email === 'photo-sever@yandex.ru') return false;
+                  if (clientSearchQuery.trim() !== '') {
+                    const q = clientSearchQuery.trim().toLowerCase();
+                    return (cli.fullName||'').toLowerCase().includes(q) ||
+                           (cli.email||'').toLowerCase().includes(q) ||
+                           (cli.phone||'').toLowerCase().includes(q);
+                  }
+                  return true;
+                }).map(cli => {
+                  const userOrders = database.orders.filter(o => o.userId === cli.id);
+                  const filesCount = userOrders.reduce((sum, o) => sum + (o.files?.length || 0), 0);
+                  const isAdmin = cli.role === 'admin';
 
-                      return (
-                        <tr 
-                          key={cli.id} 
-                          onClick={() => setSelectedUserForFiles(cli)}
-                          className="hover:bg-white/8 cursor-pointer transition-colors"
-                        >
-                          <td className="py-3 px-4">
-                            <UserAvatar
-                              user={cli}
-                              className="w-9 h-9 rounded-xl"
-                            />
-                          </td>
+                  return (
+                    <div
+                      key={cli.id}
+                      onClick={() => setSelectedUserForFiles(cli)}
+                      className="user-db-card rounded-3xl p-4 cursor-pointer group relative overflow-hidden"
+                    >
+                      {/* Градиентный блик */}
+                      <div className="user-db-card-glow" />
 
-                          <td className="py-3 px-4">
-                            {editingUserId === cli.id ? (
-                              <input
-                                type="text"
-                                value={editFullName}
-                                onChange={e => setEditFullName(e.target.value)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 roundedpx-2 py-1 text-xs w-full font-bold focus:outline-none"
-                              />
-                            ) : (
-                              <div className="flex flex-col">
-                                <span className="font-extrabold text-slate-900 dark:text-slate-200 flex items-center gap-2">
-                                  {cli.fullName}
-                                  {isAdmin && (
-                                    <span className="bg-red-50 dark:bg-red-950/40 text-red-650 dark:text-red-400 text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-red-200/50 dark:border-red-900/30">
-                                      Админ
-                                    </span>
-                                  )}
-                                </span>
-                                {cli.promoCode && (
-                                  <span className="inline-flex self-start items-center gap-1 bg-emerald-50 dark:bg-emerald-950/25 text-emerald-600 dark:text-emerald-400 text-[9px] font-black px-1.5 py-0.5 rounded-lg border border-emerald-150 dark:border-emerald-900/35 mt-1 animate-pulse">
-                                    🎁 Подарен: {cli.promoCode} (-{cli.promoDiscount}%)
-                                  </span>
+                      <div className="flex items-start gap-3 relative z-10">
+                        {/* Аватар */}
+                        <div className="relative shrink-0">
+                          <UserAvatar user={cli} className="w-14 h-14 rounded-2xl ring-2 ring-white/20 shadow-lg" />
+                          {cli.isOnline && (
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-slate-900 rounded-full" />
+                          )}
+                        </div>
+
+                        {/* Инфо */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="text-sm font-black text-white truncate flex items-center gap-1.5">
+                                {editingUserId === cli.id ? (
+                                  <input
+                                    type="text"
+                                    value={editFullName}
+                                    onChange={e => setEditFullName(e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                    className="bg-white/10 border border-white/20 rounded-lg px-2 py-0.5 text-xs text-white w-full focus:outline-none"
+                                  />
+                                ) : (
+                                  <span className="truncate">{cli.fullName}</span>
                                 )}
                               </div>
-                            )}
-                            <span className="text-[9px] text-slate-400 block mt-0.5">UID: {cli.id} {cli.isSocial && '(OAuth Соцсеть)'}</span>
-                          </td>
-
-                          <td className="py-3 px-4 text-slate-505 dark:text-slate-400">{cli.email}</td>
-
-                          <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
-                            {editingUserId === cli.id ? (
-                              <input
-                                type="text"
-                                value={editPhone}
-                                onChange={e => setEditPhone(e.target.value)}
-                                className="bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 rounded px-2 py-1 text-xs w-full font-medium focus:outline-none"
-                              />
-                            ) : (
-                              cli.phone || '—'
-                            )}
-                          </td>
-
-                          <td className="py-3 px-4 text-slate-400 text-[11px]">{new Date(cli.createdAt).toLocaleDateString('ru-RU')}</td>
-
-                          <td className="py-3 px-4 text-center font-bold">
-                            <span className={`px-2.5 py-1 rounded-full text-[11px] ${
-                              filesCount > 0 
-                                ? 'bg-indigo-50 dark:bg-indigo-950/20 text-indigo-600 dark:text-indigo-400' 
-                                : 'bg-slate-55 dark:bg-slate-900 text-slate-400'
-                            }`}>
-                              {filesCount} шт.
-                            </span>
-                          </td>
-
-                          <td className="py-3 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-end gap-1.5">
-                              {editingUserId === cli.id ? (
-                                <button
-                                  onClick={handleSaveUser}
-                                  className="p-1 px-2.5 bg-indigo-650 hover:bg-indigo-700 text-white font-bold rounded-lg flex items-center gap-1 transition"
-                                >
-                                  <Save className="w-3.5 h-3.5" /> Сохранить
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleStartEditUser(cli)}
-                                  className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-                                  title="Редактировать ФИО/Телефон"
-                                >
-                                  <Edit3 className="w-4 h-4" />
-                                </button>
-                              )}
-                              {!isAdmin && (
-                                <button
-                                  onClick={() => {
-                                    setPromoGiftUser(cli);
-                                    setGivingPromoCode(cli.promoCode || '');
-                                    setGivingPromoDiscount(cli.promoDiscount || 15);
-                                  }}
-                                  className="p-2 text-slate-400 hover:text-emerald-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-                                  title="Подарить промокод"
-                                >
-                                  <Gift className="w-4 h-4" />
-                                </button>
-                              )}
-                              {!isAdmin && (
-                                <button
-                                  onClick={() => setUserToDelete(cli)}
-                                  className="p-2 text-slate-400 hover:text-rose-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition"
-                                  title="Удалить клиента и данные"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
-                              )}
+                              <div className="text-[10px] text-white/50 truncate mt-0.5">{cli.email}</div>
+                              <div className="text-[10px] text-white/40 mt-0.5">
+                                {editingUserId === cli.id ? (
+                                  <input
+                                    type="text"
+                                    value={editPhone}
+                                    onChange={e => setEditPhone(e.target.value)}
+                                    onClick={e => e.stopPropagation()}
+                                    className="bg-white/10 border border-white/20 rounded-lg px-2 py-0.5 text-[10px] text-white w-full focus:outline-none mt-0.5"
+                                  />
+                                ) : (
+                                  cli.phone || '—'
+                                )}
+                              </div>
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+
+                            {/* Бейджи */}
+                            <div className="flex flex-col items-end gap-1 shrink-0">
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${filesCount > 0 ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30' : 'bg-white/8 text-white/40 border border-white/10'}`}>
+                                {filesCount} файл.
+                              </span>
+                              <span className="text-[9px] text-white/30">{new Date(cli.createdAt).toLocaleDateString('ru-RU')}</span>
+                            </div>
+                          </div>
+
+                          {cli.promoCode && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-2 py-0.5 rounded-full border border-emerald-400/25 mt-1.5">
+                              🎁 {cli.promoCode} (-{cli.promoDiscount}%)
+                            </span>
+                          )}
+                          {cli.isSocial && (
+                            <span className="inline-flex items-center gap-1 bg-blue-500/15 text-blue-300 text-[9px] font-bold px-2 py-0.5 rounded-full border border-blue-400/20 mt-1">
+                              G Google
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Кнопки действий */}
+                      <div className="flex justify-end gap-1.5 mt-3 pt-3 border-t border-white/8 relative z-10" onClick={e => e.stopPropagation()}>
+                        {editingUserId === cli.id ? (
+                          <button onClick={handleSaveUser} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-white text-[10px] font-black rounded-xl transition">
+                            <Save className="w-3 h-3" /> Сохранить
+                          </button>
+                        ) : (
+                          <button onClick={() => handleStartEditUser(cli)} className="p-1.5 text-white/40 hover:text-white hover:bg-white/10 rounded-xl transition" title="Редактировать">
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {!isAdmin && (
+                          <button
+                            onClick={() => { setPromoGiftUser(cli); setGivingPromoCode(cli.promoCode || ''); setGivingPromoDiscount(cli.promoDiscount || 15); }}
+                            className="p-1.5 text-white/40 hover:text-emerald-400 hover:bg-white/10 rounded-xl transition"
+                            title="Подарить промокод"
+                          >
+                            <Gift className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                        {!isAdmin && (
+                          <button onClick={() => setUserToDelete(cli)} className="p-1.5 text-white/40 hover:text-rose-400 hover:bg-white/10 rounded-xl transition" title="Удалить">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* USER FILES DIALOG MODAL */}
