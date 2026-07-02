@@ -3152,3 +3152,9 @@ html, body, #root {
   transform: translateY(-2px);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), 0 8px 24px rgba(0,0,0,0.18);
 }
+
+/* Scroll indicator для hero */
+@keyframes scroll-dot {
+  0%, 100% { transform: translateY(0); opacity: 1; }
+  50% { transform: translateY(8px); opacity: 0.3; }
+}
