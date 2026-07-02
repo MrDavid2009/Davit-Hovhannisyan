@@ -2761,14 +2761,16 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                         ];
                         SVCS.forEach(svc => setDoc(doc(db, 'services', svc.id), svc).catch(console.error));
                       }}
-                      className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition cursor-pointer"
+                      className="flex items-center gap-1.5 px-3.5 py-2 text-white text-xs font-black rounded-xl transition cursor-pointer"
+                      style={{ background: '#16a34a' }}
                     >
                       ✨ Заполнить наши услуги
                     </button>
                   )}
                   <button
                     onClick={handleAddService}
-                    className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-white text-xs font-black rounded-xl transition cursor-pointer"
+                    style={{ background: '#4f46e5' }}
                   >
                     + Добавить
                   </button>
