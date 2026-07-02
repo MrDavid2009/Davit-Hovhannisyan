@@ -69,82 +69,130 @@ export function LandingPage({ onEnter }: LandingPageProps) {
         </div>
       </header>
 
-      {/* ===== HERO ===== */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 pt-10 sm:pt-16 pb-14 grid md:grid-cols-2 gap-10 items-center">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/40 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            Принимаем заказы онлайн
-          </div>
+      {/* ===== HERO — fullwidth liquid glass ===== */}
+      <section className="relative w-full overflow-hidden" style={{ minHeight: '92vh' }}>
 
-          <h1 className="landing-h1 text-3xl sm:text-4xl md:text-[42px] font-black leading-[1.1] tracking-tight mb-4">
-            Печать фото и документов<br className="hidden sm:block" /> в Раменском <span className="bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent">за минуты</span>
-          </h1>
+        {/* Фоновое видео */}
+        <video
+          src="/hero-demo.mp4"
+          autoPlay loop muted playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        />
 
-          <p className="landing-p text-sm sm:text-base leading-relaxed mb-7 max-w-md">
-            Загрузи файл онлайн — мы распечатаем и сообщим, когда будет готово. Фото, документы А4/А3, чертежи, переплёт. Без очередей и звонков.
-          </p>
+        {/* Liquid glass оверлей */}
+        <div className="absolute inset-0" style={{
+          background: 'linear-gradient(135deg, rgba(5,8,20,0.72) 0%, rgba(15,8,40,0.55) 50%, rgba(5,8,20,0.78) 100%)',
+          backdropFilter: 'blur(2px)'
+        }} />
 
-          <div className="flex flex-wrap items-center gap-3 mb-8">
-            <button
-              onClick={onEnter}
-              className="landing-cta-btn btn-holo-glass flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold cursor-pointer"
-            >
-              <Upload className="w-4 h-4" />
-              Загрузить файл
-            </button>
-            <a
-              href="https://t.me/photosever18"
-              target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-2 px-6 py-3.5 rounded-full text-sm font-bold border border-slate-200 dark:border-white/15 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
-            >
-              <Send className="w-4 h-4" />
-              Написать в Telegram
-            </a>
-          </div>
+        {/* Декоративные liquid glass шары */}
+        <div className="absolute top-[15%] right-[8%] w-64 h-64 rounded-full pointer-events-none" style={{
+          background: 'radial-gradient(circle at 35% 35%, rgba(249,115,22,0.18), rgba(99,102,241,0.08) 60%, transparent)',
+          backdropFilter: 'blur(40px)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 0 80px rgba(249,115,22,0.12)'
+        }} />
+        <div className="absolute bottom-[20%] left-[5%] w-48 h-48 rounded-full pointer-events-none" style={{
+          background: 'radial-gradient(circle at 60% 40%, rgba(99,102,241,0.15), transparent 70%)',
+          backdropFilter: 'blur(32px)',
+          border: '1px solid rgba(255,255,255,0.06)'
+        }} />
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-lg">
-            <div className="flex items-start gap-2">
-              <Phone className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold">8 (968) 050-88-00</div>
-                <div className="text-[10px] text-slate-400">Звоните</div>
-              </div>
+        {/* Контент */}
+        <div className="relative z-10 flex flex-col items-center justify-center text-center px-4 sm:px-6" style={{ minHeight: '92vh' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="max-w-3xl"
+          >
+            {/* Бейдж */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full mb-8" style={{
+              background: 'rgba(255,255,255,0.08)',
+              backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(255,255,255,0.15)'
+            }}>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-black uppercase tracking-widest text-white/80">Принимаем заказы онлайн</span>
             </div>
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold">Северное шоссе, 18</div>
-                <div className="text-[10px] text-slate-400">Раменское</div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 col-span-2 sm:col-span-1">
-              <Clock className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-              <div>
-                <div className="text-xs font-bold">Пн–Пт 9:00–19:00</div>
-                <div className="text-[10px] text-slate-400">Сб–Вс 10:00–19:00</div>
-              </div>
-            </div>
-          </div>
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="relative flex justify-center"
-        >
-          <div className="relative w-full max-w-[320px] rounded-[32px] overflow-hidden shadow-2xl border border-white/20 glass-card">
-            <video
-              src="/hero-demo.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-auto block"
-            />
-          </div>
-        </motion.div>
+            <h1 className="landing-h1 text-4xl sm:text-5xl md:text-6xl font-black leading-[1.05] tracking-tight mb-6" style={{ textShadow: '0 2px 32px rgba(0,0,0,0.5)' }}>
+              Печать фото и документов<br />
+              в Раменском{' '}
+              <span className="bg-gradient-to-r from-orange-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+                за минуты
+              </span>
+            </h1>
+
+            <p className="landing-p text-base sm:text-lg leading-relaxed mb-10 max-w-xl mx-auto" style={{ color: 'rgba(255,255,255,0.72)' }}>
+              Загрузи файл онлайн — мы распечатаем и сообщим, когда будет готово.<br className="hidden sm:block" />
+              А4/А3, фото на документы, переплёт. Без очередей и звонков.
+            </p>
+
+            {/* CTA кнопки */}
+            <div className="flex flex-wrap items-center justify-center gap-4 mb-12">
+              <button
+                onClick={onEnter}
+                className="landing-cta-btn flex items-center gap-2 px-8 py-4 rounded-full text-sm font-black cursor-pointer"
+                style={{
+                  background: 'linear-gradient(135deg, #f97316, #ec4899)',
+                  color: '#fff',
+                  boxShadow: '0 8px 32px rgba(249,115,22,0.4), 0 0 0 1px rgba(255,255,255,0.1)'
+                }}
+              >
+                <Upload className="w-4 h-4" />
+                Загрузить файл
+              </button>
+              <a
+                href="https://t.me/photosever18"
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-8 py-4 rounded-full text-sm font-black transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(16px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#fff',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
+                }}
+              >
+                <Send className="w-4 h-4" />
+                Написать в Telegram
+              </a>
+            </div>
+
+            {/* Инфо-пиллы */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {[
+                { icon: <Phone className="w-3.5 h-3.5" />, text: '8 (968) 050-88-00' },
+                { icon: <MapPin className="w-3.5 h-3.5" />, text: 'Северное шоссе, 18' },
+                { icon: <Clock className="w-3.5 h-3.5" />, text: 'Пн–Пт 9:00–19:00 · Сб–Вс 10:00–19:00' },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold" style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.85)'
+                }}>
+                  <span style={{ color: '#f97316' }}>{item.icon}</span>
+                  {item.text}
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Scroll indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.2 }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1"
+          >
+            <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">Листай вниз</span>
+            <div className="w-5 h-8 rounded-full flex items-start justify-center pt-1.5" style={{ border: '1.5px solid rgba(255,255,255,0.2)' }}>
+              <div className="w-1 h-2 rounded-full bg-white/60" style={{ animation: 'scroll-dot 1.8s ease-in-out infinite' }} />
+            </div>
+          </motion.div>
+        </div>
       </section>
 
       {/* ===== КАК ЗАКАЗАТЬ ===== */}
