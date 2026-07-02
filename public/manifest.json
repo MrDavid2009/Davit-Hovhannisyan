@@ -1,12 +1,19 @@
 {
-  "name": "Фото-Север — Копи-Центр",
+  "name": "Фото-Север — Печать документов",
   "short_name": "Фото-Север",
-  "description": "Копи-центр Фото-Север в Раменском. Печать фото, документов, переплёт. Северное шоссе, 18.",
+  "description": "Копи-центр в Раменском. Загрузи файл — мы распечатаем. Северное шоссе, 18.",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0a0a14",
   "theme_color": "#f97316",
   "orientation": "portrait-primary",
+  "lang": "ru",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity"],
+  "screenshots": [],
   "icons": [
     {
       "src": "/logo-192-v2.png",
