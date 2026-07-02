@@ -6,7 +6,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, Order, ChatMessage, Notification as AppNotification, PrintFile, OrderStatus, PaymentStatus, PaymentConfig, DatabaseState, Service } from '../types';
 import { ThemeToggle } from './ThemeToggle';
-import logoImg from '../assets/logo.png';
+// logo loaded from public dir
 import { 
   FileText, Users, Clock, MessageSquare, Download, CheckCircle, 
   Send, RefreshCw, BarChart3, Trash2, Edit3, Save, FileSpreadsheet, 
@@ -1034,7 +1034,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
         <div className="hidden md:block">
           {/* Admin title card */}
           <div className="flex items-center gap-3 mb-6">
-            <img src={logoImg} alt="Фото-Север" className="w-11 h-11 shrink-0 object-contain drop-shadow-lg" />
+            <img src="/logo-192-v2.png" alt="Фото-Север" className="w-11 h-11 shrink-0 object-contain drop-shadow-lg" />
             <div>
               <h2 className="text-sm font-black text-white leading-none">ПАНЕЛЬ ПК</h2>
               <span className="text-[10px] uppercase font-bold tracking-widest text-white/55 mt-0.5 block">Сервер Печати</span>
