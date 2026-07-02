@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { User } from '../types';
 import { Lock, Mail, User as UserIcon, Phone, ArrowRight, ShieldAlert, CheckCircle, Printer } from 'lucide-react';
 import { ThemeToggle } from './ThemeToggle';
-import { signInUserWithFirebase, registerUserWithFirebase } from '../firebaseUtils';
+import { signInUserWithFirebase, registerUserWithFirebase, signInWithGoogleFirebase } from '../firebaseUtils';
 import { motion } from 'motion/react';
 
 // Яркий голубой градиент фона окна входа (наносится напрямую через inline-style,
@@ -172,33 +172,36 @@ export function AuthScreen({ onAuthSuccess, allUsers, onRegisterUser }: AuthScre
     setSocialLoading(provider);
 
     try {
+      if (provider === 'google') {
+        // Настоящий Google OAuth через Firebase
+        const firebaseUser = await signInWithGoogleFirebase();
+        setSocialLoading(null);
+        onAuthSuccess(firebaseUser);
+        return;
+      }
+
+      // Остальные провайдеры — демо (пока не настроены)
       const providerNames = { google: 'Google', vk: 'ВКонтакте', yandex: 'Яндекс', telegram: 'Telegram' };
       const emailPrefix = provider === 'vk' ? 'vk_' : provider === 'yandex' ? 'ya_' : provider === 'telegram' ? 'tg_' : 'g_';
       const mockEmail = `${emailPrefix}user_${Math.floor(Math.random() * 9000 + 1000)}@${provider}.ru`;
-      
-      const names = [
-        'Дмитрий Ковалев',
-        'Мария Петрова',
-        'Александр Власов',
-        'Елена Соколова',
-        'Сергей Морозов'
-      ];
+      const names = ['Дмитрий Ковалев','Мария Петрова','Александр Власов','Елена Соколова','Сергей Морозов'];
       const randomName = names[Math.floor(Math.random() * names.length)];
       const fullName = `${randomName} (${providerNames[provider]})`;
       const phone = '+7 (999) ' + Math.floor(100+Math.random()*900) + '-' + Math.floor(10+Math.random()*90) + '-' + Math.floor(10+Math.random()*90);
       const mockPassword = 'Social_Demo_Pass_123!';
-
-      // Register with real Firebase auth and save to firestore profile
       const firebaseUser = await registerUserWithFirebase(mockEmail, mockPassword, fullName, phone, 'client');
-      
-      // Mark as social
       firebaseUser.isSocial = true;
-
       setSocialLoading(null);
       onAuthSuccess(firebaseUser);
     } catch (err: any) {
-      console.error('Social mock auth failed with Firebase:', err);
-      setErrorMsg('Не удалось зарегистрировать социальный демо-профиль в Firebase Authentication. Проверьте сеть.');
+      console.error('Social auth error:', err);
+      if (err.code === 'auth/popup-closed-by-user') {
+        setErrorMsg('Окно входа было закрыто. Попробуйте снова.');
+      } else if (err.code === 'auth/popup-blocked') {
+        setErrorMsg('Браузер заблокировал всплывающее окно. Разрешите popup для этого сайта.');
+      } else {
+        setErrorMsg('Не удалось войти через Google. Попробуйте снова.');
+      }
       setSocialLoading(null);
     }
   };
