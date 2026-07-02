@@ -1026,7 +1026,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
       <div className="glass-bg-orb w-[100px] h-[100px] top-[30%] right-[20%] opacity-50 animate-[float-reverse_24s_infinite_ease-in-out]" style={{ backdropFilter: 'blur(10px) saturate(100%)' }} />
 
       {/* UNIFIED CONTAINER CARD */}
-      <div className="flex-1 flex flex-col md:flex-row min-h-0 w-full max-w-7xl mx-auto glass-panel md:bg-transparent md:border-0 md:backdrop-blur-none md:shadow-none overflow-hidden rounded-3xl md:rounded-none relative z-10">
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 w-full max-w-7xl mx-auto glass-panel md:bg-transparent md:border-0 md:backdrop-blur-none md:shadow-none rounded-3xl md:rounded-none relative z-10">
 
         {/* LEFT NAVIGATION COLUMN - Admin Side */}
         <aside className="w-full md:w-64 border-b md:border-r md:border-b-0 border-white/10 glass-panel text-white shrink-0 flex flex-row md:flex-col justify-between p-4 md:py-6 md:px-5 transition-colors relative z-10">
