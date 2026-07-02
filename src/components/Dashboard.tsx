@@ -503,7 +503,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
   const [promoError, setPromoError] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
-  const [selectedService, setSelectedService] = useState<{title: string; price: number} | null>(null);
+  const [selectedService, setSelectedService] = useState<{title: string; price: number; unit: string; qty: number; needsFile: boolean} | null>(null);
   const [showTornPaperAnimation, setShowTornPaperAnimation] = useState(false);
   const [tornPromoCode, setTornPromoCode] = useState<string>('');
 
@@ -1058,7 +1058,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
     const totalCost = finalDiscount ? Math.round(subtotal * (1 - finalDiscount / 100)) : subtotal;
 
     // Если заказ из витрины услуг — добавляем цену услуги
-    const serviceExtra = selectedService?.price || 0;
+    const serviceExtra = selectedService ? selectedService.price * selectedService.qty : 0;
     const finalTotalCost = totalCost + serviceExtra;
 
     const orderId = `ORD-${1000 + database.orders.length + 1}`;
@@ -2435,21 +2435,32 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                     </div>
                   )}
 
-                  {/* Кнопка заказа */}
                   {/* Показываем выбранную услугу если есть */}
                   {selectedService && (
-                    <div className="flex items-center justify-between p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🛍</span>
-                        <div>
-                          <p className="text-[10px] text-indigo-300 font-black uppercase tracking-widest">Услуга</p>
-                          <p className="text-white font-bold text-xs">{selectedService.title}</p>
+                    <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">🛍</span>
+                          <div>
+                            <p className="text-[10px] text-indigo-300 font-black uppercase tracking-widest">Услуга добавлена</p>
+                            <p className="text-white font-bold text-xs">{selectedService.title}</p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-emerald-400 font-black text-sm">+{selectedService.price} ₽</span>
                         <button onClick={() => { setSelectedService(null); setNotes(''); }} className="text-white/30 hover:text-white/60 text-xs cursor-pointer">✕</button>
                       </div>
+                      {selectedService.price > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-white/50">Кол-во:</span>
+                          <button onClick={() => setSelectedService(s => s && s.qty > 1 ? {...s, qty: s.qty - 1} : s)} className="w-6 h-6 rounded-lg bg-white/10 text-white text-sm flex items-center justify-center cursor-pointer hover:bg-white/20">−</button>
+                          <span className="text-white font-black text-sm w-6 text-center">{selectedService.qty}</span>
+                          <button onClick={() => setSelectedService(s => s ? {...s, qty: s.qty + 1} : s)} className="w-6 h-6 rounded-lg bg-white/10 text-white text-sm flex items-center justify-center cursor-pointer hover:bg-white/20">+</button>
+                          <span className="text-[10px] text-white/40">{selectedService.unit}</span>
+                          <span className="ml-auto text-emerald-400 font-black text-sm">= {selectedService.price * selectedService.qty} ₽</span>
+                        </div>
+                      )}
+                      {selectedService.price === 0 && (
+                        <p className="text-[10px] text-white/50">Стоимость уточняется в офисе на Северном шоссе, 18</p>
+                      )}
                     </div>
                   )}
 
@@ -4847,7 +4858,13 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                           <button
                             onClick={() => {
                               const priceNum = parseInt(svc.price.replace(/[^0-9]/g, ''), 10) || 0;
-                              setSelectedService({ title: svc.title, price: priceNum });
+                              setSelectedService({ 
+                                title: svc.title, 
+                                price: priceNum,
+                                unit: svc.unit || 'шт',
+                                qty: 1,
+                                needsFile: svc.category === 'print' || svc.category === 'scan'
+                              });
                               setNotes(`Услуга: ${svc.title} — ${svc.price}`);
                               setActiveTab('upload');
                             }}
