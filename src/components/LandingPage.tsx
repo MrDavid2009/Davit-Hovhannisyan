@@ -261,8 +261,8 @@ export function LandingPage({ onEnter }: LandingPageProps) {
             <div>ИП, ИНН 501110120673</div>
             <div>ОГРНИП 324774600314137</div>
             <div className="pt-2 flex flex-col gap-1">
-              <button onClick={onEnter} className="text-left hover:text-orange-500 transition-colors underline decoration-dotted">Публичная оферта</button>
-              <button onClick={onEnter} className="text-left hover:text-orange-500 transition-colors underline decoration-dotted">Политика обработки персональных данных</button>
+              <a href="/legal.html" target="_blank" className="text-left hover:text-orange-500 transition-colors underline decoration-dotted">Публичная оферта</a>
+              <a href="/legal.html#privacy" target="_blank" className="text-left hover:text-orange-500 transition-colors underline decoration-dotted">Политика обработки персональных данных</a>
             </div>
           </div>
         </div>
