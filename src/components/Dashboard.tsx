@@ -507,6 +507,18 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
   const [showTornPaperAnimation, setShowTornPaperAnimation] = useState(false);
   const [tornPromoCode, setTornPromoCode] = useState<string>('');
 
+  // Автоматически пересчитываем qty услуги когда загружены файлы и подсчитаны страницы
+  React.useEffect(() => {
+    if (!selectedService) return;
+    const isPrintOrScan = selectedService.unit === 'стр';
+    if (!isPrintOrScan) return;
+
+    const totalPages = uploadedFiles.reduce((sum, f) => sum + (f.pageCount || 1), 0);
+    if (totalPages > 0 && totalPages !== selectedService.qty) {
+      setSelectedService(prev => prev ? { ...prev, qty: totalPages } : null);
+    }
+  }, [uploadedFiles.map(f => f.pageCount).join(','), selectedService?.unit]);
+
 
   const getActivePromo = () => {
     if (appliedPromo) return appliedPromo;
@@ -1908,7 +1920,14 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                                 <p className="text-xs font-bold text-white truncate">{file.name}</p>
                                 <span className="text-[10px] text-white/40 block mt-0.5">
                                   {formatFileSize(file.size)} · {file.formatGroup.toUpperCase()}
-                                  {file.pageCount !== undefined ? ` · ${file.pageCount} стр.` : ' · сканирование...'}
+                                  {file.pageCount !== undefined ? (
+                                    <span>
+                                      {` · `}<strong className="text-emerald-400">{file.pageCount} стр.</strong>
+                                      {selectedService && selectedService.unit === 'стр' && (
+                                        <span className="text-indigo-300"> · {file.pageCount * selectedService.price} ₽</span>
+                                      )}
+                                    </span>
+                                  ) : ' · считаем страницы...'}
                                   {file.url ? ' · ✓ Загружено' : ' · Загрузка...'}
                                   {file.colorFillPercent !== undefined && (file.printColor || 'bw') !== 'bw' && !isPhoto && (
                                     <span className="text-amber-400 font-black ml-1"> · 🎨 {colorFillLabel(file.colorFillPercent)} ({file.colorFillPercent}%)</span>
@@ -2413,9 +2432,15 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                                     <span>−{savings} ₽</span>
                                   </div>
                                 )}
+                                {selectedService && selectedService.price > 0 && (
+                                  <div className="flex justify-between text-indigo-300 font-bold text-[11px]">
+                                    <span className="truncate max-w-[160px]">{selectedService.title} × {selectedService.qty} {selectedService.unit}:</span>
+                                    <span>+{selectedService.price * selectedService.qty} ₽</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between items-center mt-1">
                                   <span className="text-[10px] font-black text-white/50 uppercase tracking-wider">Итого:</span>
-                                  <span className="text-2xl font-black text-white">₽{total}</span>
+                                  <span className="text-2xl font-black text-white">₽{total + (selectedService && selectedService.price > 0 ? selectedService.price * selectedService.qty : 0)}</span>
                                 </div>
                               </>
                             );
