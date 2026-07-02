@@ -1253,10 +1253,9 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                 {activeTab === 'chat' && 'Оперативная чат-линия клиентов'}
                 {activeTab === 'users' && 'Управление пользователями & Конфиденциальность'}
                 {activeTab === 'analytics' && 'Статистика копи-центра в реальном времени'}
-                {activeTab === 'settings' && 'Редактирование профиля & Интедация банка'}
+                {activeTab === 'settings' && 'Редактирование профиля & Интеграция банка'}
                 {activeTab === 'services' && 'Витрина услуг'}
                 {activeTab === 'archive' && 'Архив выполненных заказов'}
-                {activeTab === 'services' && 'Настройка цен и услуг'}
               </h1>
               <p className="text-xs text-white/60 mt-1">
                 {activeTab === 'orders' && 'Управляйте приоритетами очередей принтера Epson, изменяйте статусы готовности, выгружайте CSV накладные.'}
@@ -1264,14 +1263,14 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                 {activeTab === 'users' && 'Просмотр контактов, редактирование профилей и полное удаление согласно регламенту.'}
                 {activeTab === 'analytics' && 'Сводная аналитика выручки, распределение графиков популярности расширений.'}
                 {activeTab === 'settings' && 'Настройка вашего профиля администратора, выбор аватаров и банковский СБП терминал.'}
-                {activeTab === 'services' && 'Управляйте карточками услуг. Клиенты видят их в личном кабинете и могут добавить к заказу.'}
+                {activeTab === 'services' && 'Добавляйте, редактируйте и скрывайте услуги. Клиенты видят карточки в личном кабинете.'}
                 {activeTab === 'archive' && 'История успешно распечатанных и выданных заказов.'}
-                {activeTab === 'services' && 'Управляйте тарифами на цветную печать, ламинирование, брошюровку и другие услуги копи-центра.'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            <span className="text-[10px] text-white/40 font-bold hidden sm:block">Тема</span>
             <ThemeToggle />
             <div className="text-xs glass-card px-3.5 py-2 rounded-xl text-white font-bold">
               Очередь принтера: <strong className="text-emerald-300">{database.orders.filter(o => o.status !== 'printed').length} активных</strong>
@@ -2730,6 +2729,115 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                     )}
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: ВИТРИНА УСЛУГ — отдельная полноценная вкладка */}
+          {activeTab === 'services' && (
+            <div className="space-y-4 overflow-y-auto flex-1 min-h-0 pb-6">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <p className="text-[11px] text-white/50">Клиенты видят карточки в личном кабинете. Добавляй, редактируй, скрывай без кода.</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  {(database.services || []).length === 0 && (
+                    <button
+                      onClick={() => {
+                        const SVCS = [
+                          { id: 'svc_print_a4_bw', emoji: '🖨️', title: 'Печать А4 ч/б', description: 'Чёрно-белая печать на офисной бумаге А4', price: '20 ₽/стр', priceNum: 20, unit: 'стр', category: 'print', isActive: true, order: 1, imageUrl: '' },
+                          { id: 'svc_print_a4_color_eco', emoji: '🎨', title: 'Печать А4 цвет (эконом)', description: 'Цветная печать А4 — эконом качество', price: '25 ₽/стр', priceNum: 25, unit: 'стр', category: 'print', isActive: true, order: 2, imageUrl: '' },
+                          { id: 'svc_print_a4_color_std', emoji: '🎨', title: 'Печать А4 цвет (стандарт)', description: 'Цветная печать А4 — стандарт', price: '40 ₽/стр', priceNum: 40, unit: 'стр', category: 'print', isActive: true, order: 3, imageUrl: '' },
+                          { id: 'svc_print_a4_color_pro', emoji: '🎨', title: 'Печать А4 цвет (фото)', description: 'Цветная печать А4 — фотокачество', price: '65 ₽/стр', priceNum: 65, unit: 'стр', category: 'print', isActive: true, order: 4, imageUrl: '' },
+                          { id: 'svc_print_a3_bw_std', emoji: '📄', title: 'Печать А3 ч/б (офисная)', description: 'Чёрно-белая печать А3 на офисной бумаге', price: '100 ₽/стр', priceNum: 100, unit: 'стр', category: 'print', isActive: true, order: 5, imageUrl: '' },
+                          { id: 'svc_print_a3_color_std', emoji: '📄', title: 'Печать А3 цвет (офисная)', description: 'Цветная печать А3 на офисной бумаге', price: '150 ₽/стр', priceNum: 150, unit: 'стр', category: 'print', isActive: true, order: 6, imageUrl: '' },
+                          { id: 'svc_print_a3_bw_thick', emoji: '📐', title: 'Печать А3 ч/б (плотная)', description: 'Чёрно-белая печать А3 на плотной бумаге', price: '250 ₽/стр', priceNum: 250, unit: 'стр', category: 'print', isActive: true, order: 7, imageUrl: '' },
+                          { id: 'svc_print_a3_color_thick', emoji: '📐', title: 'Печать А3 цвет (плотная)', description: 'Цветная печать А3 на плотной бумаге', price: '250 ₽/стр', priceNum: 250, unit: 'стр', category: 'print', isActive: true, order: 8, imageUrl: '' },
+                          { id: 'svc_photo_docs', emoji: '📷', title: 'Фото на документы', description: 'Фото на паспорт и другие документы. Печать сразу в офисе.', price: '450 ₽/комплект', priceNum: 450, unit: 'комплект', category: 'photo', isActive: true, order: 9, imageUrl: '' },
+                          { id: 'svc_scan', emoji: '🔍', title: 'Сканирование', description: 'Сканирование документов в PDF или JPG', price: '20 ₽/стр', priceNum: 20, unit: 'стр', category: 'scan', isActive: true, order: 10, imageUrl: '' },
+                          { id: 'svc_laminate_a4', emoji: '🛡️', title: 'Ламинирование А4', description: 'Ламинирование документов А4', price: '100 ₽/лист', priceNum: 100, unit: 'лист', category: 'laminate', isActive: true, order: 11, imageUrl: '' },
+                          { id: 'svc_binding_soft', emoji: '📎', title: 'Переплёт (мягкий)', description: 'Мягкий термопереплёт документов', price: '250 ₽/шт', priceNum: 250, unit: 'шт', category: 'binding', isActive: true, order: 12, imageUrl: '' },
+                          { id: 'svc_binding_std', emoji: '📚', title: 'Переплёт (стандарт)', description: 'Стандартный переплёт с обложкой', price: '350 ₽/шт', priceNum: 350, unit: 'шт', category: 'binding', isActive: true, order: 13, imageUrl: '' },
+                          { id: 'svc_binding_hard', emoji: '📗', title: 'Переплёт (жёсткий)', description: 'Твёрдый переплёт — диплом, дипломная работа', price: '450 ₽/шт', priceNum: 450, unit: 'шт', category: 'binding', isActive: true, order: 14, imageUrl: '' },
+                          { id: 'svc_ceramics', emoji: '🏺', title: 'Печать на керамике', description: 'Кружки, тарелки, фотоплитки — только в офисе. Каталог у администратора.', price: 'По каталогу', priceNum: 0, unit: 'шт', category: 'ceramics', isActive: true, order: 15, imageUrl: '' },
+                        ];
+                        SVCS.forEach(svc => setDoc(doc(db, 'services', svc.id), svc).catch(console.error));
+                      }}
+                      className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl transition cursor-pointer"
+                    >
+                      ✨ Заполнить наши услуги
+                    </button>
+                  )}
+                  <button
+                    onClick={handleAddService}
+                    className="flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black rounded-xl transition cursor-pointer"
+                  >
+                    + Добавить
+                  </button>
+                </div>
+              </div>
+
+              {(database.services || []).length === 0 && (
+                <div className="flex flex-col items-center justify-center py-16 text-white/30 gap-3">
+                  <Printer className="w-12 h-12 opacity-20" />
+                  <p className="text-xs font-bold text-center">Нажми «✨ Заполнить наши услуги» или «+ Добавить» чтобы создать первую карточку</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                {(database.services || []).sort((a, b) => (a.order||0) - (b.order||0)).map((svc) => (
+                  <div key={svc.id} className="analytics-card rounded-3xl p-4 flex flex-col gap-3">
+                    <label className="relative w-full h-28 rounded-2xl overflow-hidden cursor-pointer group block">
+                      {svc.imageUrl ? (
+                        <img src={svc.imageUrl} alt={svc.title} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-white/5 border border-dashed border-white/15 flex flex-col items-center justify-center gap-1">
+                          <span className="text-3xl">{svc.emoji}</span>
+                          <span className="text-[9px] text-white/25 font-bold">загрузить фото</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-white text-xs font-bold">📷 Загрузить</span>
+                      </div>
+                      <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]; if (!file) return;
+                          const formData = new FormData(); formData.append('photo', file);
+                          try {
+                            const res = await fetch('https://sever-18.ru/api/service-upload.php', { method: 'POST', body: formData });
+                            const data = await res.json();
+                            if (data.url) handleUpdateService(svc.id, 'imageUrl', data.url);
+                          } catch { alert('Ошибка загрузки фото'); }
+                        }} />
+                    </label>
+
+                    <div className="flex items-center gap-2">
+                      <input type="text" defaultValue={svc.emoji} onBlur={(e) => handleUpdateService(svc.id, 'emoji', e.target.value)}
+                        className="w-9 text-center text-xl bg-white/5 border border-white/10 rounded-lg p-1 focus:outline-none" maxLength={2} />
+                      <input type="text" defaultValue={svc.title} onBlur={(e) => handleUpdateService(svc.id, 'title', e.target.value)}
+                        className="flex-1 bg-transparent border-b border-white/15 text-sm font-bold text-white pb-1 focus:outline-none" placeholder="Название" />
+                    </div>
+
+                    <input type="text" defaultValue={svc.description} onBlur={(e) => handleUpdateService(svc.id, 'description', e.target.value)}
+                      className="w-full bg-transparent text-xs text-white/50 focus:outline-none border-b border-white/10 pb-1" placeholder="Описание" />
+
+                    <div className="flex items-center gap-2">
+                      <input type="text" defaultValue={svc.price} onBlur={(e) => handleUpdateService(svc.id, 'price', e.target.value)}
+                        className="flex-1 bg-transparent text-sm font-black text-emerald-400 focus:outline-none border-b border-white/10 pb-1" placeholder="Цена (текст)" />
+                      <input type="number" defaultValue={svc.priceNum || 0} onBlur={(e) => handleUpdateService(svc.id, 'priceNum', parseInt(e.target.value)||0)}
+                        className="w-16 text-center bg-white/5 border border-white/10 rounded-lg px-1 py-1 text-xs text-white focus:outline-none" title="Числовая цена для расчёта" />
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-white/8">
+                      <button onClick={() => handleUpdateService(svc.id, 'isActive', !svc.isActive)}
+                        className={`text-[10px] font-bold px-3 py-1.5 rounded-xl transition cursor-pointer ${svc.isActive ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-white/30'}`}>
+                        {svc.isActive ? '👁 Видна' : '🙈 Скрыта'}
+                      </button>
+                      <button onClick={() => handleDeleteService(svc.id, svc.title)}
+                        className="p-2 text-white/30 hover:text-rose-400 hover:bg-white/10 rounded-xl transition cursor-pointer">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
