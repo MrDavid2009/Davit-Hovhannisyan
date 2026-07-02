@@ -1814,6 +1814,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                 }).map(cli => {
                   const userOrders = database.orders.filter(o => o.userId === cli.id);
                   const filesCount = userOrders.reduce((sum, o) => sum + (o.files?.length || 0), 0);
+                  const ordersCount = userOrders.length;
                   const isAdmin = cli.role === 'admin';
 
                   return (
@@ -1869,8 +1870,8 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
 
                             {/* Бейджи */}
                             <div className="flex flex-col items-end gap-1 shrink-0">
-                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${filesCount > 0 ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30' : 'bg-white/8 text-white/40 border border-white/10'}`}>
-                                {filesCount} файл.
+                              <span className={`text-[9px] font-black px-2 py-0.5 rounded-full ${ordersCount > 0 ? 'bg-indigo-500/30 text-indigo-300 border border-indigo-400/30' : 'bg-white/8 text-white/40 border border-white/10'}`}>
+                                {ordersCount} заказ.
                               </span>
                               <span className="text-[9px] text-white/30">{new Date(cli.createdAt).toLocaleDateString('ru-RU')}</span>
                             </div>
