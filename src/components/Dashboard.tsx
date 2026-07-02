@@ -1871,198 +1871,143 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
 
                 {/* Uploaded Queue Items */}
                 {uploadedFiles.length > 0 && (
-                  <div className="space-y-3.5">
-                    <div className="flex justify-between items-center bg-slate-50 dark:bg-slate-950/40 p-3 rounded-2xl">
-                      <span className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                        Список к отправке на печать ({uploadedFiles.length})
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">
+                        Файлы к печати ({uploadedFiles.length})
                       </span>
-                      <button
-                        onClick={() => setUploadedFiles([])}
-                        className="text-xs text-rose-500 hover:text-rose-605 font-bold cursor-pointer"
-                      >
+                      <button onClick={() => setUploadedFiles([])} className="text-[10px] text-rose-400 hover:text-rose-300 font-bold cursor-pointer">
                         Очистить всё
                       </button>
                     </div>
-
-                    <div className="space-y-3 pr-1">
+                    <div className="space-y-4">
                       {uploadedFiles.map(file => {
                         const isPhoto = file.paperType === 'photo';
                         const updateFile = (updates: Partial<typeof file>) => {
                           setUploadedFiles(prev => prev.map(f => f.id === file.id ? { ...f, ...updates } : f));
                         };
                         const photoSizes = [
-                          { key: '10x15', label: '10×15', sub: 'стандарт', price: 20 },
-                          { key: 'polaroid', label: 'Полароид', sub: 'квадрат', price: 30 },
-                          { key: '13x18', label: '13×18', sub: 'средний', price: 50 },
-                          { key: '15x21', label: '15×21', sub: 'большой', price: 70 },
-                          { key: '20x30', label: '20×30', sub: 'постер', price: 100 },
-                          { key: '30x40', label: '30×40', sub: 'большой постер', price: 250 },
+                          { key: '10x15', label: '10×15', price: 20 },
+                          { key: 'polaroid', label: 'Полароид', price: 30 },
+                          { key: '13x18', label: '13×18', price: 50 },
+                          { key: '15x21', label: '15×21', price: 70 },
+                          { key: '20x30', label: '20×30', price: 100 },
+                          { key: '30x40', label: '30×40', price: 250 },
                         ] as const;
                         const selSize = photoSizes.find(s => s.key === (file.photoSize || '10x15')) || photoSizes[0];
-                        const copies = file.fileCopies || 1;
+                        const fileCopies = file.fileCopies || 1;
                         const pages = file.pageCount || 1;
                         const fillPct = file.colorFillPercent ?? 50;
                         const isA3 = file.format === 'a3';
                         const filePP = isPhoto ? selSize.price
-                          : (file.printColor === 'bw'
-                            ? (isA3 ? 100 : 20)
-                            : (isA3 ? 150 : colorFillPrice(fillPct)));
-                        const fileCost = filePP * (isPhoto ? 1 : pages) * copies;
+                          : (file.printColor === 'bw' ? (isA3 ? 100 : 20) : (isA3 ? 150 : colorFillPrice(fillPct)));
+                        const fileCost = filePP * (isPhoto ? 1 : pages) * fileCopies;
 
                         return (
-                          <div key={file.id} className="glass-panel rounded-2xl overflow-hidden">
-                            {/* Строка файла */}
-                            <div className="flex items-center gap-3 p-3.5">
-                              <div className="p-2.5 glass-icon-capsule glass-icon-indigo shrink-0">
-                                <FileType className="w-4 h-4" />
+                          <div key={file.id} className="rounded-2xl overflow-hidden" style={{
+                            background: 'rgba(29,32,34,0.55)',
+                            backdropFilter: 'blur(40px)',
+                            borderTop: '1px solid rgba(255,255,255,0.15)',
+                            borderLeft: '1px solid rgba(255,255,255,0.12)',
+                            borderRight: '1px solid rgba(255,255,255,0.05)',
+                            borderBottom: '1px solid rgba(255,255,255,0.05)',
+                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)'
+                          }}>
+                            <div className="flex flex-col md:flex-row gap-4 p-4">
+                              {/* Превью */}
+                              <div className="relative w-full md:w-40 h-32 rounded-xl overflow-hidden shrink-0" style={{ border: '1px solid rgba(255,255,255,0.1)' }}>
+                                {file.previewUrl ? (
+                                  <img src={file.previewUrl} alt={file.name} className="w-full h-full object-cover cursor-pointer"
+                                    onClick={() => setPreviewFile(file)} />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.05)' }}>
+                                    <FileText className="w-8 h-8 text-white/20" />
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 50%)' }} />
+                                <div className="absolute bottom-2 left-2 right-2">
+                                  <span className="text-white text-[9px] font-medium px-2 py-0.5 rounded-full truncate block" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                    {file.name}
+                                  </span>
+                                </div>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{file.name}</p>
-                                <span className="text-[10px] text-white/40 block mt-0.5">
-                                  {formatFileSize(file.size)} · {file.formatGroup.toUpperCase()}
-                                  {file.pageCount !== undefined ? (
-                                    <span>
-                                      {` · `}<strong className="text-emerald-400">{file.pageCount} стр.</strong>
-                                      {selectedService && selectedService.unit === 'стр' && (
-                                        <span className="text-indigo-300"> · {file.pageCount * selectedService.price} ₽</span>
-                                      )}
-                                    </span>
-                                  ) : ' · считаем страницы...'}
-                                  {file.url ? ' · ✓ Загружено' : ' · Загрузка...'}
-                                  {file.colorFillPercent !== undefined && (file.printColor || 'bw') !== 'bw' && !isPhoto && (
-                                    <span className="text-amber-400 font-black ml-1"> · 🎨 {colorFillLabel(file.colorFillPercent)} ({file.colorFillPercent}%)</span>
-                                  )}
-                                  {file.previewUrl && <span onClick={(e) => { e.stopPropagation(); setPreviewFile(file); }} className="text-indigo-400 font-black ml-1.5 cursor-pointer hover:underline">· 👁 Предпросмотр</span>}
-                                </span>
-                              </div>
-                              <button type="button" onClick={() => removeUploadedFile(file.id)}
-                                className="p-1.5 text-white/25 hover:text-rose-400 transition-colors cursor-pointer shrink-0">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
 
-                            {/* Настройки печати */}
-                            <div className="border-t border-white/8 p-3.5 space-y-3">
-                              <div className="grid grid-cols-2 gap-2.5">
-                                {/* Цветность */}
+                              {/* Параметры */}
+                              <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-3">
+                                <div>
+                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Формат</p>
+                                  {isPhoto ? (
+                                    <div className="flex flex-wrap gap-1">
+                                      {photoSizes.slice(0,3).map(s => (
+                                        <button key={s.key} onClick={() => updateFile({ photoSize: s.key, paperType: 'photo' })}
+                                          className="px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                                          style={{
+                                            background: (file.photoSize||'10x15') === s.key ? 'rgba(255,92,0,0.2)' : 'rgba(255,255,255,0.06)',
+                                            border: (file.photoSize||'10x15') === s.key ? '1px solid rgba(255,92,0,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                                            color: (file.photoSize||'10x15') === s.key ? '#ffb59a' : 'rgba(255,255,255,0.5)'
+                                          }}>{s.label}</button>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <div className="flex gap-1.5">
+                                      {(['a4','a3'] as const).map(fmt => (
+                                        <button key={fmt} onClick={() => updateFile({ format: fmt })}
+                                          className="flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer"
+                                          style={{
+                                            background: (file.format||'a4') === fmt ? 'rgba(255,92,0,0.2)' : 'rgba(255,255,255,0.06)',
+                                            border: (file.format||'a4') === fmt ? '1px solid rgba(255,92,0,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                                            color: (file.format||'a4') === fmt ? '#ffb59a' : 'rgba(255,255,255,0.5)'
+                                          }}>{fmt.toUpperCase()}</button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+
                                 <div>
                                   <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Цветность</p>
                                   <div className="flex gap-1.5">
-                                    {(['bw','color'] as const).map(v => {
-                                      const isPhoto = file.paperType === 'photo';
-                                      const isDisabled = v === 'bw' && isPhoto;
-                                      return (
-                                        <button key={v}
-                                          onClick={() => {
-                                            if (isDisabled) return;
-                                            updateFile({ printColor: v });
-                                          }}
-                                          disabled={isDisabled}
-                                          title={isDisabled ? 'Для фотобумаги доступна только цветная печать' : ''}
-                                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all ${
-                                            isDisabled
-                                              ? 'bg-white/3 border-white/8 text-white/20 cursor-not-allowed opacity-40'
-                                              : (file.printColor || 'bw') === v
-                                              ? 'option-pill-active cursor-pointer'
-                                              : 'option-pill-inactive cursor-pointer'
-                                          }`}>
-                                          {v === 'bw' ? 'Ч/Б' : 'Цвет'}
-                                        </button>
-                                      );
-                                    })}
+                                    {isPhoto ? (
+                                      <span className="px-3 py-1.5 text-[10px] font-bold rounded-lg text-white/50" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>Цветное</span>
+                                    ) : (
+                                      (['bw','color'] as const).map(v => (
+                                        <button key={v} onClick={() => updateFile({ printColor: v })}
+                                          className="flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all cursor-pointer"
+                                          style={{
+                                            background: (file.printColor||'bw') === v ? 'rgba(255,92,0,0.2)' : 'rgba(255,255,255,0.06)',
+                                            border: (file.printColor||'bw') === v ? '1px solid rgba(255,92,0,0.6)' : '1px solid rgba(255,255,255,0.1)',
+                                            color: (file.printColor||'bw') === v ? '#ffb59a' : 'rgba(255,255,255,0.5)'
+                                          }}>{v === 'bw' ? 'Ч/Б' : 'Цвет'}</button>
+                                      ))
+                                    )}
                                   </div>
                                 </div>
-                                {/* Бумага */}
+
                                 <div>
-                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Бумага</p>
-                                  <div className="flex gap-1.5">
-                                    {(['plain','photo'] as const).map(v => (
-                                      <button key={v} onClick={() => updateFile({ 
-                                        paperType: v, 
-                                        photoSize: v === 'photo' ? (file.photoSize || '10x15') : undefined,
-                                        printColor: v === 'photo' ? 'color' : file.printColor, // фото = только цвет
-                                      })}
-                                        className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
-                                          (file.paperType || 'plain') === v
-                                            ? 'option-pill-active'
-                                            : 'option-pill-inactive'}`}>
-                                        {v === 'plain' ? 'Обычная' : 'Фото 🖼'}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                                {/* Формат — только для обычной бумаги */}
-                                {!isPhoto && (
-                                  <div>
-                                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Формат</p>
-                                    <div className="flex gap-1.5">
-                                      {(['a4','a3'] as const).map(v => (
-                                        <button key={v} onClick={() => updateFile({ format: v })}
-                                          className={`px-2.5 py-1.5 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
-                                            (file.format || 'a4') === v
-                                              ? 'option-pill-active'
-                                              : 'option-pill-inactive'}`}>
-                                          {v.toUpperCase()}
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                                {/* Копии */}
-                                <div>
-                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Копий</p>
+                                  <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">
+                                    Кол-во {file.pageCount ? `× ${file.pageCount} стр.` : ''}
+                                  </p>
                                   <div className="flex items-center gap-2">
-                                    <button onClick={() => updateFile({ fileCopies: Math.max(1, copies - 1) })}
-                                      className="w-6 h-6 rounded-lg bg-white/8 border border-white/15 text-white text-sm font-black cursor-pointer hover:bg-white/18 flex items-center justify-center">−</button>
-                                    <span className="text-sm font-black text-white min-w-[18px] text-center">{copies}</span>
-                                    <button onClick={() => updateFile({ fileCopies: copies + 1 })}
-                                      className="w-6 h-6 rounded-lg bg-white/8 border border-white/15 text-white text-sm font-black cursor-pointer hover:bg-white/18 flex items-center justify-center">+</button>
+                                    <button onClick={() => updateFile({ fileCopies: Math.max(1, fileCopies - 1) })}
+                                      className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:bg-white/10 transition-colors"
+                                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>−</button>
+                                    <span className="w-6 text-center text-sm font-black text-white">{fileCopies}</span>
+                                    <button onClick={() => updateFile({ fileCopies: fileCopies + 1 })}
+                                      className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold cursor-pointer hover:bg-white/10 transition-colors"
+                                      style={{ border: '1px solid rgba(255,255,255,0.1)' }}>+</button>
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-col justify-between items-end">
+                                  <button onClick={() => removeUploadedFile(file.id)}
+                                    className="text-[10px] text-rose-400/50 hover:text-rose-400 transition-colors flex items-center gap-1 cursor-pointer">
+                                    <Trash2 className="w-3 h-3" /> Удалить
+                                  </button>
+                                  <div className="text-right">
+                                    <div className="text-[9px] text-white/30 mb-0.5">Итог</div>
+                                    <div className="text-lg font-black" style={{ color: '#ff5c00' }}>{fileCost} ₽</div>
                                   </div>
                                 </div>
                               </div>
-
-                              {/* Блок размеров фото */}
-                              {isPhoto && (
-                                <div className="pt-2 border-t border-white/8 space-y-2.5">
-                                  <p className="text-[9px] font-black text-rose-400/90 uppercase tracking-widest">📸 Размер фотографии</p>
-                                  <div className="grid grid-cols-3 gap-1.5">
-                                    {photoSizes.map(s => (
-                                      <button key={s.key} onClick={() => updateFile({ photoSize: s.key })}
-                                        className={`photo-size-pill ${
-                                          (file.photoSize || '10x15') === s.key
-                                            ? 'photo-size-pill-active'
-                                            : 'photo-size-pill-inactive'}`}>
-                                        <div className="text-xs font-black">{s.label}</div>
-                                        <div className="text-[9px] opacity-60 mt-0.5">{s.sub}</div>
-                                        <div className={`text-[10px] font-black mt-1 ${(file.photoSize || '10x15') === s.key ? 'photo-size-price-active' : 'opacity-50'}`}>{s.price} ₽</div>
-                                      </button>
-                                    ))}
-                                  </div>
-                                  {/* Поверхность */}
-                                  <div>
-                                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1.5">Поверхность</p>
-                                    <div className="grid grid-cols-2 gap-1.5">
-                                      {([['glossy','✨','Глянцевая','Яркие насыщенные цвета'],['matte','🔲','Матовая','Без отпечатков пальцев']] as const).map(([v,icon,name,desc]) => (
-                                        <button key={v} onClick={() => updateFile({ photoFinish: v })}
-                                          className={`surface-pill ${
-                                            (file.photoFinish || 'glossy') === v
-                                              ? 'surface-pill-active'
-                                              : 'surface-pill-inactive'}`}>
-                                          <div className="text-lg">{icon}</div>
-                                          <div className="text-[11px] font-black mt-1">{name}</div>
-                                          <div className="text-[9px] text-white/38 mt-0.5">{desc}</div>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            {/* Стоимость файла */}
-                            <div className="px-3.5 pb-3 flex justify-between items-center text-[10px] text-white/40">
-                              <span>{isPhoto ? `${selSize.label} × ${selSize.price} ₽ × ${copies} шт.` : `${pages} стр. × ${filePP} ₽ × ${copies} шт.`}</span>
-                              <strong className="text-white text-sm">{fileCost} ₽</strong>
                             </div>
                           </div>
                         );
@@ -2070,6 +2015,7 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                     </div>
                   </div>
                 )}
+
 
                 {/* INTERACTIVE PRINT MOCKUP PREVIEW VISUALIZER */}
                 {uploadedFiles.length > 0 && (
