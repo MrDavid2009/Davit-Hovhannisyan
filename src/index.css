@@ -3058,3 +3058,31 @@ html, body, #root {
 }
 
 
+
+/* ============================================
+   ЧАТ: фикс обрезания сверху на мобильном и десктопе
+   ============================================ */
+.grok-chat-app {
+  height: calc(100vh - 180px) !important;
+  max-height: calc(100vh - 180px) !important;
+}
+@media (max-width: 768px) {
+  .grok-chat-app {
+    height: calc(100vh - 120px) !important;
+    max-height: calc(100vh - 120px) !important;
+    border-radius: 16px !important;
+  }
+  .grok-sidebar-header {
+    padding: 10px 12px !important;
+    font-size: 12px !important;
+  }
+  .grok-thread-header {
+    padding: 8px 12px !important;
+  }
+  .grok-messages {
+    padding: 10px !important;
+  }
+  .grok-composer {
+    padding: 8px 10px !important;
+  }
+}
