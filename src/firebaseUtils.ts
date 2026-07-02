@@ -11,6 +11,8 @@ import {
   signOut,
   updateProfile,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithPopup,
   doc,
   getDoc,
   setDoc,
@@ -187,6 +189,49 @@ export async function signInUserWithFirebase(email: string, password: string): P
  */
 export async function signOutUserWithFirebase(): Promise<void> {
   await signOut(auth);
+}
+
+/**
+ * Sign in or register via real Google OAuth (signInWithPopup)
+ * Если пользователь уже есть в Firestore — загружает профиль.
+ * Если новый — создаёт профиль автоматически.
+ */
+export async function signInWithGoogleFirebase(): Promise<User> {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
+  const result = await signInWithPopup(auth, provider);
+  const fbUser = result.user;
+
+  const normalizedEmail = (fbUser.email || '').toLowerCase();
+  const isExplicitAdmin = fbUser.uid === 'pRIp0NUg6lSR2ujVhywFkQ5TIW22' ||
+                          fbUser.uid === 'YbYV6lLNlnVeJ0SKSr3ufzNzNx23' ||
+                          normalizedEmail === 'admin@print.ru' ||
+                          normalizedEmail === 'photo-sever@yandex.ru';
+
+  // Проверяем, есть ли уже профиль в Firestore
+  const userDocRef = doc(db, 'users', fbUser.uid);
+  const userSnap = await getDoc(userDocRef);
+
+  if (userSnap.exists()) {
+    // Уже зарегистрирован — просто возвращаем профиль
+    return userSnap.data() as User;
+  }
+
+  // Новый пользователь — создаём профиль
+  const newUser: User = {
+    id: fbUser.uid,
+    email: fbUser.email || normalizedEmail,
+    fullName: fbUser.displayName || 'Пользователь Google',
+    phone: fbUser.phoneNumber || '',
+    role: isExplicitAdmin ? 'admin' : 'client',
+    createdAt: new Date().toISOString(),
+    avatarUrl: fbUser.photoURL || '',
+    isSocial: true,
+  };
+
+  await setDoc(userDocRef, newUser);
+  return newUser;
 }
 
 /**
