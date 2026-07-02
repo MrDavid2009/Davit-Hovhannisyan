@@ -1129,6 +1129,25 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
           </button>
 
           <button
+            onClick={() => setActiveTab('services')}
+            className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial ${
+              activeTab === 'services'
+                ? 'nav-holo-active bg-white/10 text-white font-black'
+                : 'text-white/55 hover:bg-white/5 hover:text-white'
+            }`}
+          >
+            <div className={`glass-icon-capsule w-9 h-9 shrink-0 ${activeTab === 'services' ? 'glass-icon-active' : ''}`} style={{background: activeTab === 'services' ? 'rgba(249,115,22,0.3)' : 'rgba(255,255,255,0.1)'}}>
+              <Printer className="w-4.5 h-4.5 text-white" />
+            </div>
+            <span className="hidden sm:inline">Витрина</span>
+            {(database.services || []).length > 0 && (
+              <span className="ml-auto hidden md:flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black bg-orange-500/30 text-orange-300">
+                {(database.services || []).length}
+              </span>
+            )}
+          </button>
+
+          <button
             onClick={() => setActiveTab('archive')}
             className={`flex items-center gap-1.5 md:gap-3 px-3 py-2 md:py-2.5 text-xs sm:text-sm font-semibold rounded-2xl transition-all duration-200 justify-center md:justify-start flex-1 md:flex-initial ${
               activeTab === 'archive'
@@ -1235,6 +1254,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                 {activeTab === 'users' && 'Управление пользователями & Конфиденциальность'}
                 {activeTab === 'analytics' && 'Статистика копи-центра в реальном времени'}
                 {activeTab === 'settings' && 'Редактирование профиля & Интедация банка'}
+                {activeTab === 'services' && 'Витрина услуг'}
                 {activeTab === 'archive' && 'Архив выполненных заказов'}
                 {activeTab === 'services' && 'Настройка цен и услуг'}
               </h1>
@@ -1244,6 +1264,7 @@ export function AdminPanel({ adminUser, onLogout, database, onUpdateDatabase }: 
                 {activeTab === 'users' && 'Просмотр контактов, редактирование профилей и полное удаление согласно регламенту.'}
                 {activeTab === 'analytics' && 'Сводная аналитика выручки, распределение графиков популярности расширений.'}
                 {activeTab === 'settings' && 'Настройка вашего профиля администратора, выбор аватаров и банковский СБП терминал.'}
+                {activeTab === 'services' && 'Управляйте карточками услуг. Клиенты видят их в личном кабинете и могут добавить к заказу.'}
                 {activeTab === 'archive' && 'История успешно распечатанных и выданных заказов.'}
                 {activeTab === 'services' && 'Управляйте тарифами на цветную печать, ламинирование, брошюровку и другие услуги копи-центра.'}
               </p>
