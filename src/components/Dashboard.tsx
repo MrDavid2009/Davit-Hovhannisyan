@@ -4610,81 +4610,98 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -16 }}
             transition={{ duration: 0.22 }}
-            className="space-y-5 pb-8 md:overflow-y-auto md:flex-1 min-h-0 pr-1 w-full overflow-x-hidden"
+            className="flex flex-col gap-4 pb-8 w-full overflow-x-hidden overflow-y-auto flex-1 min-h-0"
           >
-            <div className="mb-6">
-              <h2 className="text-xl font-black text-white mb-1">Контакты студии</h2>
-              <p className="text-sm text-slate-400">Мы всегда рады помочь вам!</p>
-            </div>
+            {/* Карточки контактов */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
-              <div className="w-11 h-11 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0">
-                <MapPin className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Адрес</p>
-                <p className="text-white font-bold text-base">Северное шоссе, 18</p>
-                <p className="text-slate-400 text-sm">Раменское, Московская область</p>
-                <a href="https://yandex.ru/maps/?text=Раменское+Северное+шоссе+18" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-xs text-indigo-400 hover:text-indigo-300 font-semibold">
-                  Открыть на карте →
-                </a>
-              </div>
-            </div>
+              {/* Телефон */}
+              <a href="tel:+79680508800" className="contact-card-lg group flex items-center gap-4 p-5 rounded-2xl transition-all active:scale-95"
+                style={{ background: 'rgba(16,209,139,0.08)', border: '1.5px solid rgba(16,209,139,0.2)', backdropFilter: 'blur(20px)' }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(16,209,139,0.15)' }}>
+                  <Phone className="w-6 h-6 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-400/70 mb-0.5">Телефон</p>
+                  <p className="text-white font-black text-lg leading-tight">+7 (968) 050-88-00</p>
+                  <p className="text-white/40 text-xs mt-0.5">Звонки и WhatsApp</p>
+                </div>
+              </a>
 
-            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
-              <div className="w-11 h-11 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0">
-                <Phone className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Телефон</p>
-                <a href="tel:+79680508800" className="text-white font-bold text-base hover:text-emerald-400 transition-colors">
-                  +7 (968) 050-88-00
-                </a>
-                <p className="text-slate-400 text-sm mt-0.5">Звонки и WhatsApp</p>
-              </div>
-            </div>
+              {/* Telegram */}
+              <a href="https://t.me/photosever18" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-4 p-5 rounded-2xl transition-all active:scale-95"
+                style={{ background: 'rgba(56,189,248,0.08)', border: '1.5px solid rgba(56,189,248,0.2)', backdropFilter: 'blur(20px)' }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(56,189,248,0.15)' }}>
+                  <Send className="w-6 h-6 text-sky-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-sky-400/70 mb-0.5">Telegram</p>
+                  <p className="text-white font-black text-lg leading-tight">@photosever18</p>
+                  <p className="text-white/40 text-xs mt-0.5">Пишите в любое время</p>
+                </div>
+              </a>
 
-            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
-              <div className="w-11 h-11 rounded-xl bg-sky-500/20 flex items-center justify-center shrink-0">
-                <MessageSquare className="w-5 h-5 text-sky-400" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Telegram</p>
-                <a href="https://t.me/photosever18" target="_blank" rel="noopener noreferrer" className="text-white font-bold text-base hover:text-sky-400 transition-colors">
-                  @photosever18
-                </a>
-                <p className="text-slate-400 text-sm mt-0.5">Пишите в любое время</p>
-              </div>
-            </div>
+              {/* Адрес */}
+              <a href="https://yandex.ru/maps/?text=Раменское+Северное+шоссе+18" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-4 p-5 rounded-2xl transition-all active:scale-95"
+                style={{ background: 'rgba(99,102,241,0.08)', border: '1.5px solid rgba(99,102,241,0.2)', backdropFilter: 'blur(20px)' }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(99,102,241,0.15)' }}>
+                  <MapPin className="w-6 h-6 text-indigo-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400/70 mb-0.5">Адрес</p>
+                  <p className="text-white font-black text-base leading-tight">Северное шоссе, 18</p>
+                  <p className="text-white/40 text-xs mt-0.5">Раменское · Открыть на карте →</p>
+                </div>
+              </a>
 
-            <div className="glass-panel rounded-2xl p-5 flex gap-4 items-start">
-              <div className="w-11 h-11 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                <Clock className="w-5 h-5 text-amber-400" />
-              </div>
-              <div className="w-full">
-                <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-3">Часы работы</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300 text-sm">Понедельник — Пятница</span>
-                    <span className="text-white font-bold text-sm">9:00 — 19:00</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300 text-sm">Суббота</span>
-                    <span className="text-white font-bold text-sm">10:00 — 19:00</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-300 text-sm">Воскресенье</span>
-                    <span className="text-white font-bold text-sm">10:00 — 19:00</span>
+              {/* Часы работы */}
+              <div className="flex items-start gap-4 p-5 rounded-2xl"
+                style={{ background: 'rgba(251,146,60,0.08)', border: '1.5px solid rgba(251,146,60,0.2)', backdropFilter: 'blur(20px)' }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0" style={{ background: 'rgba(251,146,60,0.15)' }}>
+                  <Clock className="w-6 h-6 text-orange-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-orange-400/70 mb-2">Часы работы</p>
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-white/60 text-xs">Пн–Пт</span>
+                      <span className="text-white font-bold text-sm">9:00 — 19:00</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-white/60 text-xs">Сб–Вс</span>
+                      <span className="text-white font-bold text-sm">10:00 — 19:00</span>
+                    </div>
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="text-white/60 text-xs">Онлайн заказ</span>
+                      <span className="text-emerald-400 font-black text-xs">24/7</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            </div>
 
-            <a href="tel:+79680508800" className="flex items-center justify-center gap-2 w-full py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-sm hover:opacity-90 transition-opacity">
-              <Phone className="w-4 h-4" />
-              Позвонить нам
+            {/* Большая кнопка позвонить */}
+            <a href="tel:+79680508800"
+              className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-black text-base text-white transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #10b981, #059669)',
+                boxShadow: '0 8px 24px rgba(16,185,129,0.35)'
+              }}>
+              <Phone className="w-5 h-5" />
+              Позвонить: +7 (968) 050-88-00
+            </a>
+
+            {/* Telegram кнопка */}
+            <a href="https://t.me/photosever18" target="_blank" rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 w-full py-4 rounded-2xl font-black text-base text-white transition-all active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                boxShadow: '0 8px 24px rgba(14,165,233,0.3)'
+              }}>
+              <Send className="w-5 h-5" />
+              Написать в Telegram
             </a>
 
           </motion.div>
