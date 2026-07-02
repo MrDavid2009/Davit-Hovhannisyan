@@ -1826,20 +1826,27 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                   </div>
                 )}
 
-                {/* Drag zone Area */}
+                {/* Drag zone Area — liquid glass style */}
                 <div
-                  onDragEnter={!isWorkingHours() ? undefined : handleDrag}
-                  onDragOver={!isWorkingHours() ? undefined : handleDrag}
-                  onDragLeave={!isWorkingHours() ? undefined : handleDrag}
-                  onDrop={!isWorkingHours() ? undefined : handleDrop}
-                  onClick={!isWorkingHours() ? undefined : () => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-3xl p-8 md:p-12 text-center transition-all ${
-                    !isWorkingHours()
-                      ? 'border-rose-250 bg-rose-50/10 dark:bg-rose-950/5 cursor-not-allowed opacity-60'
-                      : dragActive 
-                      ? 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/20 scale-98 cursor-pointer' 
-                      : 'border-slate-200 dark:border-slate-800 hover:border-indigo-500/60 dark:hover:border-indigo-500/40 bg-slate-50/50 dark:bg-slate-950/20 cursor-pointer'
-                  }`}
+                  onDragEnter={handleDrag}
+                  onDragOver={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className="upload-drop-zone relative cursor-pointer"
+                  style={{
+                    background: dragActive
+                      ? 'radial-gradient(ellipse at center, rgba(99,102,241,0.18) 0%, rgba(15,8,40,0.7) 100%)'
+                      : 'radial-gradient(ellipse at center, rgba(29,32,34,0.6) 0%, rgba(11,15,16,0.8) 100%)',
+                    backdropFilter: 'blur(40px)',
+                    border: dragActive ? '1.5px solid rgba(99,102,241,0.6)' : '1.5px solid rgba(255,255,255,0.08)',
+                    borderRadius: '28px',
+                    padding: '40px 24px',
+                    transition: 'all 0.3s ease',
+                    boxShadow: dragActive
+                      ? '0 0 40px rgba(99,102,241,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
+                      : '0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08)'
+                  }}
                 >
                   <input
                     ref={fileInputRef}
@@ -1849,24 +1856,56 @@ export function Dashboard({ user, onLogout, database, onUpdateDatabase, onDelete
                     className="hidden"
                     accept=".zip,.rar,.7z,.doc,.docx,.pdf,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.heic,.heif,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   />
-                  
-                  <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                    !isWorkingHours()
-                      ? 'bg-rose-50 dark:bg-rose-950/20 text-rose-505 dark:text-rose-400'
-                      : 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400'
-                  }`}>
-                    {!isWorkingHours() ? <Clock className="w-8 h-8 animate-pulse text-rose-600" /> : <Upload className="w-8 h-8" />}
+
+                  {/* Иконка + */}
+                  <div className="flex flex-col items-center gap-5">
+                    <div className="upload-plus-icon" style={{
+                      width: 72, height: 72,
+                      borderRadius: 20,
+                      background: 'rgba(255,255,255,0.06)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)',
+                      transition: 'transform 0.2s ease'
+                    }}>
+                      <span style={{ fontSize: 36, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>+</span>
+                    </div>
+
+                    <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      Drag & drop
+                    </p>
+
+                    {/* Кнопка Select File */}
+                    <div className="upload-select-btn" style={{
+                      position: 'relative',
+                      borderRadius: 999,
+                      padding: '2px',
+                      background: 'linear-gradient(135deg, #38bdf8, #818cf8, #f472b6, #fb923c, #38bdf8)',
+                      backgroundSize: '300% 300%',
+                      animation: 'upload-btn-glow 4s linear infinite',
+                      boxShadow: '0 0 24px rgba(99,102,241,0.4), 0 0 48px rgba(99,102,241,0.15)'
+                    }}>
+                      <div style={{
+                        borderRadius: 999,
+                        background: 'linear-gradient(135deg, #1a1f35 0%, #0f172a 100%)',
+                        padding: '14px 36px',
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        backdropFilter: 'blur(20px)'
+                      }}>
+                        <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>
+                          Выбрать файлы
+                        </span>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                        </svg>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-center" style={{ color: 'rgba(255,255,255,0.25)', maxWidth: 260 }}>
+                      PDF, JPG, PNG, DOCX, ZIP — до 100 МБ
+                    </p>
                   </div>
-                  
-                  <p className={`text-sm font-bold ${!isWorkingHours() ? 'text-rose-650 dark:text-rose-450' : 'text-slate-800 dark:text-white'}`}>
-                    {!isWorkingHours() ? 'Прием файлов приостановлен (Центр Закрыт)' : 'Выберите файлы или перетащите их сюда'}
-                  </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-2">
-                    {!isWorkingHours() 
-                      ? 'Мы принимаем файлы только в рабочие часы Пн-Пт 09:00 - 19:00, Сб-Вс 10:00 - 19:00. Приходите к нам завтра!' 
-                      : 'Поддерживаются любые типы форматов: архивы (zip, rar), изображения (jpg, png) и документы (pdf, docx, xlsx, txt) до 100 МБ.'
-                    }
-                  </p>
                 </div>
 
                 {/* Uploaded Queue Items */}
